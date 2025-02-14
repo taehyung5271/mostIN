@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="utf-8"?>
+<menu xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- 버튼 1: 홈 -->
+    <item
+        android:id="@+id/action_home"
+        android:icon="@drawable/ic_home"
+        android:title="홈"
+        android:iconTint="@color/white"
+        app:showAsAction="always" />
+    <item
+        android:id="@+id/action_commuting"
+        android:icon="@drawable/ic_commuting"
+        android:title="스케쥴"
+        android:iconTint="@color/white"
+        app:showAsAction="always"/>
+    <item
+        android:id="@+id/action_ordering"
+        android:icon="@drawable/ic_goods_order"
+        android:title="스케쥴"
+        android:iconTint="@color/white"
+        app:showAsAction="always"/>
+    <!-- 버튼 2: 설정 -->
+    <item
+        android:id="@+id/action_calendar"
+        android:icon="@drawable/ic_calendar"
+        android:title="설정"
+        android:iconTint="@color/white"
+        app:showAsAction="always" />
+    <item
+        android:id="@+id/action_logout"
+        android:icon="@drawable/ic_logout"
+        android:title="로그아웃"
+        android:iconTint="@color/white"
+        app:showAsAction="always" />
+
+</menu>
+
