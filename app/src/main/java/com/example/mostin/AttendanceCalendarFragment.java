@@ -2,13 +2,18 @@ package com.example.mostin;
 
 import android.os.Bundle;
 import android.util.Log;
+import android.view.GestureDetector;
 import android.view.LayoutInflater;
+import android.view.MotionEvent;
 import android.view.View;
 import android.view.ViewGroup;
+import android.view.animation.Animation;
+import android.view.animation.AnimationUtils;
 import android.widget.TextView;
 import android.widget.Toast;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
+import androidx.core.view.GestureDetectorCompat;
 import androidx.fragment.app.Fragment;
 import androidx.recyclerview.widget.GridLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
@@ -22,6 +27,7 @@ public class AttendanceCalendarFragment extends Fragment {
     private Calendar currentCalendar;
     private String employeeId;
     private String employeeName;
+    private GestureDetectorCompat gestureDetector;
 
     public AttendanceCalendarFragment() {
     }
@@ -50,6 +56,23 @@ public class AttendanceCalendarFragment extends Fragment {
 
         currentCalendar = Calendar.getInstance();
         updateCalendar();
+
+        gestureDetector = new GestureDetectorCompat(requireContext(), new RecyclerViewOnGestureListener());
+        recyclerCalendar.addOnItemTouchListener(new RecyclerView.OnItemTouchListener() {
+            @Override
+            public boolean onInterceptTouchEvent(@NonNull RecyclerView rv, @NonNull MotionEvent e) {
+                gestureDetector.onTouchEvent(e);
+                return false;
+            }
+
+            @Override
+            public void onTouchEvent(@NonNull RecyclerView rv, @NonNull MotionEvent e) {
+            }
+
+            @Override
+            public void onRequestDisallowInterceptTouchEvent(boolean disallowIntercept) {
+            }
+        });
 
         return view;
     }
@@ -83,13 +106,41 @@ public class AttendanceCalendarFragment extends Fragment {
         }
 
         CalendarAdapter adapter = new CalendarAdapter(dates);
-        recyclerCalendar.setLayoutManager(new GridLayoutManager(requireContext(), 7));
+        recyclerCalendar.setLayoutManager(new NonScrollingGridLayoutManager(requireContext(), 7));
         recyclerCalendar.setAdapter(adapter);
     }
 
     private void changeMonth(int offset) {
+        Animation animation;
+        if (offset < 0) {
+            animation = AnimationUtils.loadAnimation(requireContext(), R.anim.slide_in_left);
+        } else {
+            animation = AnimationUtils.loadAnimation(requireContext(), R.anim.slide_in_right);
+        }
+        recyclerCalendar.startAnimation(animation);
         currentCalendar.add(Calendar.MONTH, offset);
         updateCalendar();
     }
 
+    private class RecyclerViewOnGestureListener extends GestureDetector.SimpleOnGestureListener {
+        private static final int SWIPE_THRESHOLD = 100;
+        private static final int SWIPE_VELOCITY_THRESHOLD = 100;
+
+        @Override
+        public boolean onFling(MotionEvent e1, MotionEvent e2, float velocityX, float velocityY) {
+            float diffX = e2.getX() - e1.getX();
+            float diffY = e2.getY() - e1.getY();
+            if (Math.abs(diffX) > Math.abs(diffY)) {
+                if (Math.abs(diffX) > SWIPE_THRESHOLD && Math.abs(velocityX) > SWIPE_VELOCITY_THRESHOLD) {
+                    if (diffX > 0) {
+                        changeMonth(-1);
+                    } else {
+                        changeMonth(1);
+                    }
+                    return true;
+                }
+            }
+            return false;
+        }
+    }
 }

@@ -13,12 +13,10 @@ import androidx.recyclerview.widget.RecyclerView;
 import java.util.List;
 
 public class GoodsAdapter extends RecyclerView.Adapter<GoodsAdapter.ViewHolder> {
-    private final List<Integer> imageList; // 이미지 리소스 ID 리스트
-    public interface OnItemClickListener {
-        void onItemClick(int position, String description);
-    }
-    public GoodsAdapter(List<Integer> itemList) {
-        this.imageList = itemList;
+    private final List<GoodsItem> itemList;
+
+    public GoodsAdapter(List<GoodsItem> itemList) {
+        this.itemList = itemList;
     }
 
     @NonNull
@@ -30,13 +28,13 @@ public class GoodsAdapter extends RecyclerView.Adapter<GoodsAdapter.ViewHolder> 
 
     @Override
     public void onBindViewHolder(@NonNull ViewHolder holder, int position) {
-        int imageRes = imageList.get(position);
-        holder.imageView.setImageResource(imageRes);
-        String goodsName[] = new String[]{"카프리","카스","카스 레몬","카스레몬\n논알콜","카스 논알콜","카스라이트","덕덕구스","버드와이저","한맥","호가든","구스IPA"};
+        GoodsItem item = itemList.get(position);
+        holder.imageView.setImageResource(item.getImageRes());
+
         // 이미지 클릭 시 오버레이 표시
         holder.imageView.setOnClickListener(v -> {
             holder.overlay.setVisibility(View.VISIBLE);
-            holder.descriptionText.setText(goodsName[position]);
+            holder.descriptionText.setText(item.getName());
         });
 
         // 오버레이 클릭 시 숨김
@@ -47,7 +45,7 @@ public class GoodsAdapter extends RecyclerView.Adapter<GoodsAdapter.ViewHolder> 
 
     @Override
     public int getItemCount() {
-        return imageList.size();
+        return itemList.size();
     }
 
     public static class ViewHolder extends RecyclerView.ViewHolder {

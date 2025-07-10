@@ -12,6 +12,7 @@ import androidx.recyclerview.widget.RecyclerView;
 import androidx.recyclerview.widget.StaggeredGridLayoutManager;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 
 public class IntroduceGoodsFragment extends Fragment {
@@ -30,20 +31,22 @@ public class IntroduceGoodsFragment extends Fragment {
         goodsRecyclerView = view.findViewById(R.id.goods_recyclerView);
         goodsRecyclerView.setLayoutManager(new LinearLayoutManager(getContext()));
 
-        // 더미 데이터 생성
-        List<Integer> itemList = new ArrayList<>();
-        itemList.add(R.drawable.cafri);
-        itemList.add(R.drawable.cass);
-        itemList.add(R.drawable.casslemon);
-        itemList.add(R.drawable.casslemonnab);
-        itemList.add(R.drawable.cassnab);
-        itemList.add(R.drawable.casslight);
-        itemList.add(R.drawable.duckduckgoose);
-        itemList.add(R.drawable.budweiser);
-        itemList.add(R.drawable.hanmac);
-        itemList.add(R.drawable.hoegaardeen);
-        itemList.add(R.drawable.gooseipa);
+        // GoodsItem 리스트 생성
+        List<GoodsItem> itemList = new ArrayList<>();
+        itemList.add(new GoodsItem(R.drawable.cafri, "카프리"));
+        itemList.add(new GoodsItem(R.drawable.cass, "카스"));
+        itemList.add(new GoodsItem(R.drawable.casslemon, "카스 레몬"));
+        itemList.add(new GoodsItem(R.drawable.casslemonnab, "카스레몬\n논알콜"));
+        itemList.add(new GoodsItem(R.drawable.cassnab, "카스 논알콜"));
+        itemList.add(new GoodsItem(R.drawable.casslight, "카스라이트"));
+        itemList.add(new GoodsItem(R.drawable.duckduckgoose, "덕덕구스"));
+        itemList.add(new GoodsItem(R.drawable.budweiser, "버드와이저"));
+        itemList.add(new GoodsItem(R.drawable.hanmac, "한맥"));
+        itemList.add(new GoodsItem(R.drawable.hoegaardeen, "호가든"));
+        itemList.add(new GoodsItem(R.drawable.gooseipa, "구스IPA"));
 
+        // 이미지 리스트를 랜덤으로 섞음
+        Collections.shuffle(itemList);
 
         // 어댑터 설정
         adapter = new GoodsAdapter(itemList);
