@@ -1,4 +1,4 @@
-package com.example.mostin;
+package com.example.mostin.fragments;
 
 import android.os.Bundle;
 import android.util.Log;
@@ -18,7 +18,11 @@ import androidx.fragment.app.Fragment;
 import androidx.recyclerview.widget.GridLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
-
+import com.example.mostin.R;
+import com.example.mostin.utils.SQLiteHelper;
+import com.example.mostin.models.DateModel;
+import com.example.mostin.utils.CalendarUtils;
+import com.example.mostin.adapters.CalendarAdapter;
 import com.example.mostin.utils.NonScrollingGridLayoutManager;
 
 import java.util.Calendar;
@@ -115,15 +119,26 @@ public class AttendanceCalendarFragment extends Fragment {
     }
 
     private void changeMonth(int offset) {
-        Animation animation;
-        if (offset < 0) {
-            animation = AnimationUtils.loadAnimation(requireContext(), R.anim.slide_in_left);
-        } else {
-            animation = AnimationUtils.loadAnimation(requireContext(), R.anim.slide_in_right);
+        Animation inAnimation;
+        Animation outAnimation;
+
+        if (offset < 0) { // 이전 달로 이동 (오른쪽 스와이프)
+            inAnimation = AnimationUtils.loadAnimation(requireContext(), R.anim.slide_in_left);
+            outAnimation = AnimationUtils.loadAnimation(requireContext(), R.anim.slide_out_right);
+        } else { // 다음 달로 이동 (왼쪽 스와이프)
+            inAnimation = AnimationUtils.loadAnimation(requireContext(), R.anim.slide_in_right);
+            outAnimation = AnimationUtils.loadAnimation(requireContext(), R.anim.slide_out_left);
         }
-        recyclerCalendar.startAnimation(animation);
+
+        // 현재 뷰에 나가는 애니메이션 적용
+        recyclerCalendar.startAnimation(outAnimation);
+
+        // 달력 데이터 업데이트
         currentCalendar.add(Calendar.MONTH, offset);
         updateCalendar();
+
+        // 새로운 뷰에 들어오는 애니메이션 적용
+        recyclerCalendar.startAnimation(inAnimation);
     }
 
     private class RecyclerViewOnGestureListener extends GestureDetector.SimpleOnGestureListener {
