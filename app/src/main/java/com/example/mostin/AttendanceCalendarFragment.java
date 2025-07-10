@@ -17,6 +17,10 @@ import androidx.core.view.GestureDetectorCompat;
 import androidx.fragment.app.Fragment;
 import androidx.recyclerview.widget.GridLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
+
+
+import com.example.mostin.utils.NonScrollingGridLayoutManager;
+
 import java.util.Calendar;
 import java.util.List;
 

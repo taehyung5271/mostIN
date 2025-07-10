@@ -29,7 +29,7 @@ public class IntroduceGoodsFragment extends Fragment {
         View view = inflater.inflate(R.layout.fragment_introduce_goods, container, false);
 
         goodsRecyclerView = view.findViewById(R.id.goods_recyclerView);
-        goodsRecyclerView.setLayoutManager(new LinearLayoutManager(getContext()));
+        
 
         // GoodsItem 리스트 생성
         List<GoodsItem> itemList = new ArrayList<>();
