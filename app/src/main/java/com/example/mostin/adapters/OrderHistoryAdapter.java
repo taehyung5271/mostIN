@@ -33,6 +33,12 @@ public class OrderHistoryAdapter extends RecyclerView.Adapter<OrderHistoryAdapte
         notifyDataSetChanged();
     }
 
+    public void clearData() {
+        this.orderHistory.clear();
+        this.workPlaceName = null; // Clear workplace name as well
+        notifyDataSetChanged();
+    }
+
     @NonNull
     @Override
     public ViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {

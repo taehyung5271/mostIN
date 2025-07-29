@@ -19,14 +19,20 @@ import androidx.recyclerview.widget.GridLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
 import com.example.mostin.R;
-import com.example.mostin.utils.SQLiteHelper;
 import com.example.mostin.models.DateModel;
 import com.example.mostin.utils.CalendarUtils;
 import com.example.mostin.adapters.CalendarAdapter;
 import com.example.mostin.utils.NonScrollingGridLayoutManager;
+import com.example.mostin.api.ApiClient;
+import com.example.mostin.api.ApiService;
+import com.example.mostin.models.CommuteModel;
 
 import java.util.Calendar;
 import java.util.List;
+
+import retrofit2.Call;
+import retrofit2.Callback;
+import retrofit2.Response;
 
 public class AttendanceCalendarFragment extends Fragment {
 
@@ -90,32 +96,46 @@ public class AttendanceCalendarFragment extends Fragment {
                 currentCalendar.get(Calendar.YEAR),
                 currentCalendar.get(Calendar.MONTH) + 1));
 
-        SQLiteHelper dbHelper = new SQLiteHelper(requireContext());
-        List<DateModel> attendanceData = dbHelper.getAttendanceForMonth(
+        ApiService apiService = ApiClient.getApiService();
+        apiService.getMonthlyCommute(
                 employeeId,
-                employeeName,
                 currentCalendar.get(Calendar.YEAR),
-                currentCalendar.get(Calendar.MONTH)
-        );
+                currentCalendar.get(Calendar.MONTH) + 1 // Month is 0-indexed in Calendar, 1-indexed in API
+        ).enqueue(new Callback<List<CommuteModel>>() {
+            @Override
+            public void onResponse(Call<List<CommuteModel>> call, Response<List<CommuteModel>> response) {
+                if (response.isSuccessful() && response.body() != null) {
+                    List<CommuteModel> attendanceData = response.body();
+                    List<DateModel> dates = CalendarUtils.generateMonthlyCalendar(currentCalendar);
 
-        List<DateModel> dates = CalendarUtils.generateMonthlyCalendar(currentCalendar);
-        
-        for (DateModel date : dates) {
-            if (date.isCurrentMonth() && date.getDate() != null) {
-                for (DateModel attendance : attendanceData) {
-                    if (attendance.getDate() != null && 
-                        attendance.getDate().equals(date.getDate())) {
-                        date.setClockInTime(attendance.getClockInTime());
-                        date.setClockOutTime(attendance.getClockOutTime());
-                        break;
+                    for (DateModel date : dates) {
+                        if (date.isCurrentMonth() && date.getDate() != null) {
+                            for (CommuteModel attendance : attendanceData) {
+                                if (attendance.getCommuteDay() != null &&
+                                    attendance.getCommuteDay().equals(date.getDate())) {
+                                    date.setClockInTime(attendance.getStartTime());
+                                    date.setClockOutTime(attendance.getEndTime());
+                                    break;
+                                }
+                            }
+                        }
                     }
+
+                    CalendarAdapter adapter = new CalendarAdapter(dates);
+                    recyclerCalendar.setLayoutManager(new NonScrollingGridLayoutManager(requireContext(), 7));
+                    recyclerCalendar.setAdapter(adapter);
+                } else {
+                    Toast.makeText(getContext(), "출근 기록을 불러오는데 실패했습니다.", Toast.LENGTH_SHORT).show();
+                    Log.e("AttendanceCalendarFragment", "Failed to fetch attendance: " + response.message());
                 }
             }
-        }
 
-        CalendarAdapter adapter = new CalendarAdapter(dates);
-        recyclerCalendar.setLayoutManager(new NonScrollingGridLayoutManager(requireContext(), 7));
-        recyclerCalendar.setAdapter(adapter);
+            @Override
+            public void onFailure(Call<List<CommuteModel>> call, Throwable t) {
+                Toast.makeText(getContext(), "네트워크 오류: " + t.getMessage(), Toast.LENGTH_SHORT).show();
+                Log.e("AttendanceCalendarFragment", "API call failed: " + t.getMessage(), t);
+            }
+        });
     }
 
     private void changeMonth(int offset) {

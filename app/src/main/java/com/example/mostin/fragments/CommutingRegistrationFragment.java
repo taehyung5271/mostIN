@@ -22,7 +22,12 @@ import android.widget.TextView;
 import android.widget.Toast;
 
 import com.example.mostin.R;
-import com.example.mostin.utils.SQLiteHelper;
+import com.example.mostin.api.ApiClient;
+import com.example.mostin.api.ApiService;
+import com.example.mostin.models.CommuteModel;
+import com.example.mostin.models.WorkPlace;
+import com.example.mostin.utils.AppCache; // AppCache import 추가
+
 import com.naver.maps.geometry.LatLng;
 import com.naver.maps.map.CameraAnimation;
 import com.naver.maps.map.CameraUpdate;
@@ -36,15 +41,26 @@ import com.naver.maps.map.util.FusedLocationSource;
 
 import java.text.SimpleDateFormat;
 import java.util.Date;
+import java.util.HashMap;
 import java.util.Locale;
+import java.util.Map;
 
 import androidx.appcompat.app.AlertDialog;
 
+import retrofit2.Call;
+import retrofit2.Callback;
+import retrofit2.Response;
+
 public class CommutingRegistrationFragment extends Fragment implements OnMapReadyCallback {
+    // Constants for argument keys
+    public static final String ARG_EMPLOYEE_ID = "employee_id";
+    public static final String ARG_EMPLOYEE_NAME = "employee_name";
+    public static final String ARG_WORK_PLACE_NAME = "work_place_name";
+
     private MapView mapView;
     private NaverMap naverMap;
     private Button btnClockIn; // 출근 버튼
-    private SQLiteHelper dbHelper; // SQLiteHelper 인스턴스
+    
     private static final int PERMISSION_REQUEST_CODE =1000;
     private static final String[] PERMISSIONS = {
             Manifest.permission.ACCESS_COARSE_LOCATION,
@@ -72,7 +88,7 @@ public class CommutingRegistrationFragment extends Fragment implements OnMapRead
         View view = inflater.inflate(R.layout.fragment_commuting_registration, container, false);
 
         // SQLiteHelper 초기화
-        dbHelper = new SQLiteHelper(requireContext());
+        
 
         // TextView 초기화
         recentEntry = view.findViewById(R.id.recentEntry);
@@ -82,9 +98,9 @@ public class CommutingRegistrationFragment extends Fragment implements OnMapRead
         // 로그인 시 전달받은 사용자 정보 가져오기
         Bundle args = getArguments();
         if (args != null) {
-            employeeId = args.getString("employee_id");
-            employeeName = args.getString("employee_name");
-            workPlaceName = args.getString("work_place_name");
+            employeeId = args.getString(ARG_EMPLOYEE_ID);
+            employeeName = args.getString(ARG_EMPLOYEE_NAME);
+            workPlaceName = args.getString(ARG_WORK_PLACE_NAME);
             
             Log.d("CommutingRegistration", "Received data - ID: " + employeeId 
                 + ", Name: " + employeeName 
@@ -147,44 +163,6 @@ public class CommutingRegistrationFragment extends Fragment implements OnMapRead
         
         // 근무지 위치 로드 및 마커 표시
         loadWorkplaceLocation();
-
-        // 위치 변경 리스너 설정
-        naverMap.addOnLocationChangeListener(location -> {
-            if (location != null && workPlaceName != null) {
-                LatLng currentLocation = new LatLng(location.getLatitude(), location.getLongitude());
-                
-                // 근무지 위치 가져오기
-                SQLiteHelper dbHelper = new SQLiteHelper(getContext());
-                SQLiteDatabase db = dbHelper.getReadableDatabase();
-                String query = "SELECT latitude, longitude FROM " + SQLiteHelper.TABLE_WORK_PLACE + 
-                              " WHERE work_place_name = ?";
-                
-                try {
-                    Cursor cursor = db.rawQuery(query, new String[]{workPlaceName});
-                    
-                    if (cursor != null && cursor.moveToFirst()) {
-                        double workLat = cursor.getDouble(cursor.getColumnIndexOrThrow("latitude"));
-                        double workLng = cursor.getDouble(cursor.getColumnIndexOrThrow("longitude"));
-                        LatLng workLocation = new LatLng(workLat, workLng);
-                        
-                        // 현재 위치와 근무지 사이의 거리 계산
-                        double distance = getDistance(currentLocation, workLocation);
-                        
-                        // 300m 이내일 때만 출근 버튼 활성화
-                        btnClockIn.setVisibility(distance <= 300 ? View.VISIBLE : View.GONE);
-                        
-                        Log.d("Location", "Distance to workplace: " + distance + "m");
-                    }
-                    if (cursor != null) {
-                        cursor.close();
-                    }
-                } catch (Exception e) {
-                    Log.e("Location", "Error querying workplace location: " + e.getMessage());
-                } finally {
-                    db.close();
-                }
-            }
-        });
     }
 
     @Override
@@ -211,32 +189,43 @@ public class CommutingRegistrationFragment extends Fragment implements OnMapRead
     }
 
     private void checkWorkingStatus() {
-        // employeeId와 employeeName이 null이 아닌지 확인
-        if (employeeId == null || employeeName == null) {
-            Log.e("CommutingRegistration", "Employee info is null. ID: " + employeeId + ", Name: " + employeeName);
+        if (employeeId == null) {
+            Log.e("CommutingRegistration", "Employee ID is null, cannot check working status.");
             return;
         }
 
-        Cursor cursor = dbHelper.getTodayCommute(employeeId, employeeName);
-        
-        if (cursor != null && cursor.moveToFirst()) {
-            String startTime = cursor.getString(cursor.getColumnIndexOrThrow("start_time"));
-            String endTime = cursor.getString(cursor.getColumnIndexOrThrow("end_time"));
-            
-            if (startTime != null && endTime == null) {
-                isWorking = true;
-                try {
-                    SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm", Locale.getDefault());
-                    String currentDate = new SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(new Date());
-                    Date clockIn = sdf.parse(currentDate + " " + startTime);
-                    clockInTime = clockIn.getTime();
-                    updateButtonStatus();
-                } catch (Exception e) {
-                    e.printStackTrace();
+        ApiService apiService = ApiClient.getApiService();
+        Call<CommuteModel> call = apiService.getTodayCommute(employeeId);
+
+        call.enqueue(new Callback<CommuteModel>() {
+            @Override
+            public void onResponse(Call<CommuteModel> call, Response<CommuteModel> response) {
+                if (response.isSuccessful() && response.body() != null) {
+                    CommuteModel todayCommute = response.body();
+                    if (todayCommute.getStartTime() != null && todayCommute.getEndTime() == null) {
+                        isWorking = true;
+                        try {
+                            // Parse start time and update UI
+                            SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault());
+                            Date clockIn = sdf.parse(todayCommute.getCommuteDay() + " " + todayCommute.getStartTime());
+                            clockInTime = clockIn.getTime();
+                            updateButtonStatus();
+                        } catch (Exception e) {
+                            Log.e("CommutingRegistration", "Error parsing date", e);
+                        }
+                    }
+                } else {
+                    // No commute record for today, do nothing
+                    Log.d("CommutingRegistration", "No commute record for today.");
                 }
             }
-            cursor.close();
-        }
+
+            @Override
+            public void onFailure(Call<CommuteModel> call, Throwable t) {
+                Log.e("CommutingRegistration", "Error fetching today's commute", t);
+                Toast.makeText(getContext(), "오늘의 출근 기록을 가져오는 데 실패했습니다.", Toast.LENGTH_SHORT).show();
+            }
+        });
     }
 
     private void handleWorkButton() {
@@ -265,38 +254,69 @@ public class CommutingRegistrationFragment extends Fragment implements OnMapRead
     }
 
     private void clockIn() {
-        // 현재 시간 가져오기
-        String currentDate = new SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(new Date());
-        String currentTime = new SimpleDateFormat("HH:mm", Locale.getDefault()).format(new Date());
-        
-        // DB에 출근 기록 저장
-        dbHelper.saveCommute(employeeId, employeeName, workPlaceName);
-        
-        // UI 업데이트
-        isWorking = true;
-        clockInTime = System.currentTimeMillis();
-        updateButtonStatus();
-        
-        // 최근 출근 시간 텍스트 즉시 업데이트
-        recentEntry.setText("최근 출근 " + currentDate + " " + currentTime);
-        recentDeparture.setText("최근 퇴근 기록 없음");
-        
-        Toast.makeText(requireContext(), "출근이 등록되었습니다!", Toast.LENGTH_SHORT).show();
+        Map<String, String> payload = new HashMap<>();
+        payload.put("employeeId", employeeId);
+        payload.put("employeeName", employeeName);
+        payload.put("workPlaceName", workPlaceName);
+
+        ApiService apiService = ApiClient.getApiService();
+        Call<CommuteModel> call = apiService.clockIn(payload);
+
+        call.enqueue(new Callback<CommuteModel>() {
+            @Override
+            public void onResponse(Call<CommuteModel> call, Response<CommuteModel> response) {
+                if (response.isSuccessful()) {
+                    isWorking = true;
+                    clockInTime = System.currentTimeMillis();
+                    updateButtonStatus();
+                    updateRecentAttendance(); // Refresh the UI with the new record
+                    Toast.makeText(getContext(), "출근이 등록되었습니다!", Toast.LENGTH_SHORT).show();
+                } else {
+                    Toast.makeText(getContext(), "출근 등록에 실패했습니다.", Toast.LENGTH_SHORT).show();
+                }
+            }
+
+            @Override
+            public void onFailure(Call<CommuteModel> call, Throwable t) {
+                Log.e("CommutingRegistration", "Error during clock-in", t);
+                Toast.makeText(getContext(), "출근 등록 중 오류가 발생했습니다.", Toast.LENGTH_SHORT).show();
+            }
+        });
     }
 
     private void clockOut() {
-        String currentDate = new SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(new Date());
-        dbHelper.updateCommuteEndTime(employeeId, employeeName, currentDate);
-        
-        updateRecentAttendance();
-        Toast.makeText(requireContext(), "퇴근이 등록되었습니다!", Toast.LENGTH_SHORT).show();
+        Map<String, String> payload = new HashMap<>();
+        payload.put("employeeId", employeeId);
 
-        Fragment calendarFragment = new AttendanceCalendarFragment();
-        requireActivity().getSupportFragmentManager()
-                .beginTransaction()
-                .replace(R.id.fragment_container, calendarFragment)
-                .addToBackStack(null)
-                .commit();
+        ApiService apiService = ApiClient.getApiService();
+        Call<CommuteModel> call = apiService.clockOut(payload);
+
+        call.enqueue(new Callback<CommuteModel>() {
+            @Override
+            public void onResponse(Call<CommuteModel> call, Response<CommuteModel> response) {
+                if (response.isSuccessful()) {
+                    isWorking = false;
+                    updateRecentAttendance();
+                    Toast.makeText(getContext(), "퇴근이 등록되었습니다!", Toast.LENGTH_SHORT).show();
+
+                    // Navigate to calendar fragment
+                    Fragment calendarFragment = new AttendanceCalendarFragment();
+                    requireActivity().getSupportFragmentManager()
+                            .beginTransaction()
+                            .replace(R.id.fragment_container, calendarFragment)
+                            .addToBackStack(null)
+                            .commit();
+                } else {
+                    Toast.makeText(getContext(), "퇴근 등록에 실패했습니다.", Toast.LENGTH_SHORT).show();
+                }
+            }
+
+            @Override
+            public void onFailure(Call<CommuteModel> call, Throwable t) {
+                Log.e("CommutingRegistration", "Error during clock-out", t);
+                Toast.makeText(getContext(), "퇴근 등록 중 오류가 발생했습니다.", Toast.LENGTH_SHORT).show();
+            }
+        });
     }
 
     private void updateButtonStatus() {
@@ -329,6 +349,8 @@ public class CommutingRegistrationFragment extends Fragment implements OnMapRead
         if (mapView != null) {
             mapView.onStart();
         }
+        checkLocationPermission();
+        checkLocationService();
     }
 
     @Override
@@ -372,7 +394,6 @@ public class CommutingRegistrationFragment extends Fragment implements OnMapRead
     }
 
     private void updateRecentAttendance() {
-        // employeeId와 employeeName이 null이 아닌지 확인
         if (employeeId == null || employeeName == null) {
             Log.e("CommutingRegistration", "Cannot update attendance: Employee info is null");
             recentEntry.setText("최근 출근 기록 없음");
@@ -380,19 +401,40 @@ public class CommutingRegistrationFragment extends Fragment implements OnMapRead
             return;
         }
 
-        String[] recentRecords = dbHelper.getRecentCommute(employeeId, employeeName);
-        
-        if (recentRecords[0] != null && !recentRecords[0].isEmpty()) {
-            recentEntry.setText("최근 출근 " + recentRecords[0]);
-        } else {
-            recentEntry.setText("최근 출근 기록 없음");
-        }
-        
-        if (recentRecords[1] != null && !recentRecords[1].isEmpty()) {
-            recentDeparture.setText("최근 퇴근 " + recentRecords[1]);
-        } else {
-            recentDeparture.setText("최근 퇴근 기록 없음");
-        }
+        ApiService apiService = ApiClient.getApiService();
+        Call<CommuteModel> call = apiService.getRecentCommute(employeeId, employeeName);
+
+        call.enqueue(new Callback<CommuteModel>() {
+            @Override
+            public void onResponse(Call<CommuteModel> call, Response<CommuteModel> response) {
+                if (response.isSuccessful() && response.body() != null) {
+                    CommuteModel recentCommute = response.body();
+                    String startTime = recentCommute.getStartTime();
+                    String endTime = recentCommute.getEndTime();
+
+                    if (startTime != null && !startTime.isEmpty()) {
+                        recentEntry.setText("최근 출근 " + recentCommute.getCommuteDay() + " " + startTime);
+                    } else {
+                        recentEntry.setText("최근 출근 기록 없음");
+                    }
+
+                    if (endTime != null && !endTime.isEmpty()) {
+                        recentDeparture.setText("최근 퇴근 " + recentCommute.getCommuteDay() + " " + endTime);
+                    } else {
+                        recentDeparture.setText("최근 퇴근 기록 없음");
+                    }
+                } else {
+                    recentEntry.setText("최근 출근 기록 없음");
+                    recentDeparture.setText("최근 퇴근 기록 없음");
+                }
+            }
+
+            @Override
+            public void onFailure(Call<CommuteModel> call, Throwable t) {
+                Log.e("CommutingRegistration", "Error fetching recent commute", t);
+                Toast.makeText(getContext(), "최근 출퇴근 기록을 가져오는 데 실패했습니다.", Toast.LENGTH_SHORT).show();
+            }
+        });
     }
 
     private void loadWorkplaceLocation() {
@@ -401,58 +443,51 @@ public class CommutingRegistrationFragment extends Fragment implements OnMapRead
             return;
         }
 
-        SQLiteHelper dbHelper = new SQLiteHelper(getContext());
-        SQLiteDatabase db = dbHelper.getReadableDatabase();
-        
-        Log.d("CommutingRegistration", "Loading workplace location for: " + workPlaceName);
-        
-        String query = "SELECT latitude, longitude FROM " + SQLiteHelper.TABLE_WORK_PLACE + 
-                      " WHERE work_place_name = ?";
-        
-        try {
-            Cursor cursor = db.rawQuery(query, new String[]{workPlaceName});
-            
-            if (cursor != null && cursor.moveToFirst()) {
-                double latitude = cursor.getDouble(cursor.getColumnIndexOrThrow("latitude"));
-                double longitude = cursor.getDouble(cursor.getColumnIndexOrThrow("longitude"));
-                
-                Log.d("CommutingRegistration", "Found location: " + latitude + ", " + longitude);
-                
-                // 네이버 지도에 마커 추가
-                LatLng workplaceLocation = new LatLng(latitude, longitude);
-                Marker marker = new Marker();
-                marker.setPosition(workplaceLocation);
-                marker.setMap(naverMap);
-                marker.setWidth(80);
-                marker.setHeight(110);
-                marker.setCaptionText(workPlaceName);
-                marker.setCaptionTextSize(16);
-                
-                // 카메라 위치 이동 및 줌 설정
-                CameraUpdate cameraUpdate = CameraUpdate.scrollAndZoomTo(
-                    workplaceLocation,  // 마커 위치
-                    15                  // 줌 레벨 (1-20, 값이 클수록 더 가까이 보임)
-                )
-                .animate(CameraAnimation.Easing, 1000);  // 1초 동안 부드럽게 이동
-                
-                naverMap.moveCamera(cameraUpdate);
-                
-                // 마커 클릭 이벤트 추가
-                marker.setOnClickListener(overlay -> {
-                    CameraUpdate clickUpdate = CameraUpdate.scrollTo(workplaceLocation)
-                        .animate(CameraAnimation.Fly, 500);
-                    naverMap.moveCamera(clickUpdate);
-                    return true;
-                });
-            } else {
-                Log.e("CommutingRegistration", "No location data found for workplace: " + workPlaceName);
+        ApiService apiService = ApiClient.getApiService();
+        Call<WorkPlace> call = apiService.getWorkPlaceByName(workPlaceName);
+
+        call.enqueue(new Callback<WorkPlace>() {
+            @Override
+            public void onResponse(Call<WorkPlace> call, Response<WorkPlace> response) {
+                if (response.isSuccessful() && response.body() != null) {
+                    WorkPlace workplace = response.body();
+                    double latitude = workplace.getLatitude();
+                    double longitude = workplace.getLongitude();
+
+                    Log.d("CommutingRegistration", "Found location: " + latitude + ", " + longitude);
+
+                    // Add marker to Naver Map
+                    LatLng workplaceLocation = new LatLng(latitude, longitude);
+                    Marker marker = new Marker();
+                    marker.setPosition(workplaceLocation);
+                    marker.setMap(naverMap);
+                    marker.setWidth(80);
+                    marker.setHeight(110);
+                    marker.setCaptionText(workPlaceName);
+                    marker.setCaptionTextSize(16);
+
+                    // Move camera
+                    CameraUpdate cameraUpdate = CameraUpdate.scrollAndZoomTo(workplaceLocation, 15)
+                            .animate(CameraAnimation.Easing, 1000);
+                    naverMap.moveCamera(cameraUpdate);
+
+                    // Set marker click listener
+                    marker.setOnClickListener(overlay -> {
+                        CameraUpdate clickUpdate = CameraUpdate.scrollTo(workplaceLocation)
+                                .animate(CameraAnimation.Fly, 500);
+                        naverMap.moveCamera(clickUpdate);
+                        return true;
+                    });
+                } else {
+                    Log.e("CommutingRegistration", "No location data found for workplace: " + workPlaceName);
+                }
             }
-            cursor.close();
-        } catch (Exception e) {
-            Log.e("CommutingRegistration", "Error loading workplace location: " + e.getMessage());
-        } finally {
-            db.close();
-        }
+
+            @Override
+            public void onFailure(Call<WorkPlace> call, Throwable t) {
+                Log.e("CommutingRegistration", "Error loading workplace location", t);
+            }
+        });
     }
 
     // 사용자의 근무지 이름을 가��오는 메소드
