@@ -10,7 +10,6 @@ import androidx.drawerlayout.widget.DrawerLayout;
 import com.google.android.material.navigation.NavigationView;
 
 import com.example.mostin.R;
-import com.example.mostin.utils.SQLiteHelper;
 import com.example.mostin.fragments.EmployeeManagementFragment;
 import com.example.mostin.fragments.OrderHistoryFragment;
 import com.example.mostin.fragments.AdminGoodsFragment;
@@ -22,10 +21,6 @@ public class AdminHomeScreen extends AppCompatActivity implements NavigationView
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_admin_home_screen);
-
-        // 기존 user 타입을 MD로 업데이트
-        SQLiteHelper dbHelper = new SQLiteHelper(this);
-        dbHelper.updateAllUserTypesToMD();
 
         // 툴바 설정
         Toolbar toolbar = findViewById(R.id.toolbar);

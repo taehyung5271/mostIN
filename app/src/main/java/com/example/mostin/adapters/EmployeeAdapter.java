@@ -16,7 +16,8 @@ import java.util.ArrayList;
 import java.util.List;
 
 public class EmployeeAdapter extends RecyclerView.Adapter<EmployeeAdapter.EmployeeViewHolder> {
-    private List<EmployeeModel> employees;
+    private List<EmployeeModel> employees; // This will be the currently displayed list
+    private List<EmployeeModel> originalEmployees; // This will hold the full, unfiltered list
     private Context context;
     private OnItemClickListener listener;
 
@@ -31,6 +32,7 @@ public class EmployeeAdapter extends RecyclerView.Adapter<EmployeeAdapter.Employ
     public EmployeeAdapter(Context context) {
         this.context = context;
         this.employees = new ArrayList<>();
+        this.originalEmployees = new ArrayList<>();
     }
 
     @NonNull
@@ -61,9 +63,21 @@ public class EmployeeAdapter extends RecyclerView.Adapter<EmployeeAdapter.Employ
         return employees.size();
     }
 
-    public void setEmployees(List<EmployeeModel> employees) {
-        this.employees = employees;
+    // This method is now used to update the displayed list (for filtering)
+    public void updateDisplayedEmployees(List<EmployeeModel> newEmployees) {
+        this.employees = newEmployees;
         notifyDataSetChanged();
+    }
+
+    // This method is used to set the initial full list of employees
+    public void setOriginalEmployees(List<EmployeeModel> originalEmployees) {
+        this.originalEmployees = new ArrayList<>(originalEmployees); // Create a new list to avoid reference issues
+        this.employees = new ArrayList<>(originalEmployees); // Also set the displayed list initially
+        notifyDataSetChanged();
+    }
+
+    public List<EmployeeModel> getAllEmployees() {
+        return this.originalEmployees; // Return the full, unfiltered list
     }
 
     class EmployeeViewHolder extends RecyclerView.ViewHolder {
