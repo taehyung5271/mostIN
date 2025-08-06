@@ -16,7 +16,6 @@ import retrofit2.http.PUT;
 import retrofit2.http.Path;
 import retrofit2.http.Query;
 
-/* loaded from: classes6.dex */
 public interface ApiService {
     @POST("/api/commute/clock-in")
     Call<CommuteModel> clockIn(@Body Map<String, String> map);

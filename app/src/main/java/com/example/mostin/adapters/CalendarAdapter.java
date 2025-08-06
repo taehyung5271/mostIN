@@ -54,26 +54,47 @@ public class CalendarAdapter extends RecyclerView.Adapter<CalendarAdapter.Calend
         // 현재 월 강조
         holder.textDay.setAlpha(date.isCurrentMonth() ? 1.0f : 0.4f);
 
-        // 출근 시간만 간단히 표시
-        if (date.getClockInTime() != null) {
-            holder.textClockIn.setText(date.getClockInTime());
-            holder.textClockIn.setTextColor(Color.BLUE);
+        // 출근 시간 표시 (HH:mm)
+        if (date.getClockInTime() != null && date.getClockInTime().length() >= 5) {
+            holder.textClockIn.setText(date.getClockInTime().substring(0, 5));
         } else {
             holder.textClockIn.setText("");
         }
 
-        // 퇴근 시간 표시 (필요한 경우)
-        if (date.getClockOutTime() != null) {
-            holder.textClockOut.setText(date.getClockOutTime());
-            holder.textClockOut.setTextColor(Color.BLUE);
+        // 퇴근 시간 표시 (HH:mm)
+        if (date.getClockOutTime() != null && date.getClockOutTime().length() >= 5) {
+            holder.textClockOut.setText(date.getClockOutTime().substring(0, 5));
         } else {
             holder.textClockOut.setText("");
         }
 
         // 클릭 이벤트
         holder.itemView.setOnClickListener(v -> {
-            Toast.makeText(v.getContext(), date.getDay() + "일 선택됨", Toast.LENGTH_SHORT).show();
+            if (date.isCurrentMonth()) {
+                new androidx.appcompat.app.AlertDialog.Builder(v.getContext())
+                    .setTitle(date.getDay() + "일 출근 정보")
+                    .setMessage(getAttendanceInfo(date))
+                    .setPositiveButton("확인", null)
+                    .show();
+            }
         });
+    }
+
+    private String getAttendanceInfo(DateModel date) {
+        if (date.getClockInTime() == null) {
+            return "출근하지 않았습니다";
+        }
+
+        StringBuilder info = new StringBuilder();
+        if (date.getClockInTime() != null && date.getClockInTime().length() >= 5) {
+            info.append("출근시간 - ").append(date.getClockInTime().substring(0, 5));
+        }
+
+        if (date.getClockOutTime() != null && date.getClockOutTime().length() >= 5) {
+            info.append("\n퇴근시간 - ").append(date.getClockOutTime().substring(0, 5));
+        }
+
+        return info.toString();
     }
 
     @Override
