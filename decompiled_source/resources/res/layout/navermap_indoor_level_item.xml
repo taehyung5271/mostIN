@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:background="@drawable/navermap_indoor_control_item_background"
+    android:layout_width="match_parent"
+    android:layout_height="40dp">
+    <TextView
+        android:textSize="15dp"
+        android:textColor="#333333"
+        android:layout_gravity="center"
+        android:id="@+id/navermap_level"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"/>
+    <TextView
+        android:textSize="9dp"
+        android:textColor="#b0b0b0"
+        android:layout_gravity="bottom|center_horizontal"
+        android:id="@+id/navermap_connection"
+        android:visibility="gone"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="@string/navermap_pathway"/>
+</FrameLayout>

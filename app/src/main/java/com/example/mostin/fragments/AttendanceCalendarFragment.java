@@ -56,10 +56,17 @@ public class AttendanceCalendarFragment extends Fragment {
             employeeId = args.getString("employee_id");
             employeeName = args.getString("employee_name");
             Log.d("AttendanceCalendar", "Received data - ID: " + employeeId + ", Name: " + employeeName);
+
+            // 전달받은 연도와 월 정보로 달력 설정
+            currentCalendar = Calendar.getInstance();
+            if (args.containsKey("year") && args.containsKey("month")) {
+                currentCalendar.set(Calendar.YEAR, args.getInt("year"));
+                currentCalendar.set(Calendar.MONTH, args.getInt("month"));
+            }
         } else {
             Log.e("AttendanceCalendar", "No arguments received");
             Toast.makeText(requireContext(), "사용자 정보를 불러올 수 없습니다.", Toast.LENGTH_SHORT).show();
-            return view;
+            currentCalendar = Calendar.getInstance(); // 비상시 현재 날짜로 설정
         }
 
         textCurrentMonth = view.findViewById(R.id.text_current_month);
@@ -68,7 +75,6 @@ public class AttendanceCalendarFragment extends Fragment {
         view.findViewById(R.id.btn_previous_month).setOnClickListener(v -> changeMonth(-1));
         view.findViewById(R.id.btn_next_month).setOnClickListener(v -> changeMonth(1));
 
-        currentCalendar = Calendar.getInstance();
         updateCalendar();
 
         gestureDetector = new GestureDetectorCompat(requireContext(), new RecyclerViewOnGestureListener());
