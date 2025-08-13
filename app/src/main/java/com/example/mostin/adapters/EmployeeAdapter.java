@@ -65,7 +65,11 @@ public class EmployeeAdapter extends RecyclerView.Adapter<EmployeeAdapter.Employ
 
     // This method is now used to update the displayed list (for filtering)
     public void updateDisplayedEmployees(List<EmployeeModel> newEmployees) {
-        this.employees = newEmployees;
+        if (newEmployees != null) {
+            this.employees = new ArrayList<>(newEmployees);
+        } else {
+            this.employees = new ArrayList<>();
+        }
         notifyDataSetChanged();
     }
 
@@ -77,7 +81,7 @@ public class EmployeeAdapter extends RecyclerView.Adapter<EmployeeAdapter.Employ
     }
 
     public List<EmployeeModel> getAllEmployees() {
-        return this.originalEmployees; // Return the full, unfiltered list
+        return new ArrayList<>(this.originalEmployees); // Return a copy of the full, unfiltered list
     }
 
     class EmployeeViewHolder extends RecyclerView.ViewHolder {

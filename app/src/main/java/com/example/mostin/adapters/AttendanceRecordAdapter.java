@@ -46,7 +46,11 @@ public class AttendanceRecordAdapter extends RecyclerView.Adapter<AttendanceReco
     }
 
     public void setRecords(List<AttendanceRecordModel> records) {
-        this.records = records;
+        if (records != null) {
+            this.records = new ArrayList<>(records);
+        } else {
+            this.records = new ArrayList<>();
+        }
         notifyDataSetChanged();
     }
 

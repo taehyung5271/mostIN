@@ -67,7 +67,7 @@ public class OrderingFragment extends Fragment {
             employeeName = args.getString("employee_name");
         }
 
-        // RecyclerView 설정
+        // RecyclerView 설정 - 출근 근무표와 동일한 방식 사용
         recyclerView.setLayoutManager(new LinearLayoutManager(requireContext()));
         loadGoodsData();
 

@@ -51,7 +51,11 @@ public class CommutingRegistrationFragment extends Fragment implements OnMapRead
     private static final String TAG = "CommutingDebug";
     private static final int PERMISSION_REQUEST_CODE = 1000;
     private static final long WORK_DURATION_MS = 28800000; // 8 hours
-    private static final SimpleDateFormat DATE_FORMAT = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.KOREA);
+    private static final SimpleDateFormat DATE_FORMAT;
+    static {
+        DATE_FORMAT = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.KOREA);
+        DATE_FORMAT.setTimeZone(java.util.TimeZone.getTimeZone("Asia/Seoul"));
+    }
     private static final int MAX_DISTANCE_METERS = 2000;
 
     private Button btnClockInOut;
@@ -100,22 +104,51 @@ public class CommutingRegistrationFragment extends Fragment implements OnMapRead
     }
 
     private void setupListeners() {
-        btnClockInOut.setOnClickListener(this::handleWorkButtonClick);
+        if (btnClockInOut != null) {
+            btnClockInOut.setOnClickListener(this::handleWorkButtonClick);
+            Log.d(TAG, "setupListeners: Click listener set for btnClockInOut");
+        } else {
+            Log.e(TAG, "setupListeners: btnClockInOut is null, cannot set click listener");
+        }
     }
 
     private void initializeViews(View view, Bundle savedInstanceState) {
-        tvRecentEntry = view.findViewById(R.id.recentEntry);
-        tvRecentDeparture = view.findViewById(R.id.recentDeparture);
-        tvWorkPlace = view.findViewById(R.id.commuting_work_place);
-        btnClockInOut = view.findViewById(R.id.btn_clock_in);
-        mapView = view.findViewById(R.id.map_view);
+        try {
+            Log.d(TAG, "initializeViews: Starting view initialization");
+            
+            tvRecentEntry = view.findViewById(R.id.text_clock_in_time);
+            tvRecentDeparture = view.findViewById(R.id.text_clock_out_time);
+            tvWorkPlace = view.findViewById(R.id.commuting_work_place);
+            btnClockInOut = view.findViewById(R.id.btn_clock_in_out);
+            mapView = view.findViewById(R.id.map_view);
 
-        btnClockInOut.setEnabled(false);
-        btnClockInOut.setText("위치 확인 중...");
+            // Null 체크 추가
+            if (tvRecentEntry == null) Log.e(TAG, "tvRecentEntry is null!");
+            if (tvRecentDeparture == null) Log.e(TAG, "tvRecentDeparture is null!");
+            if (tvWorkPlace == null) Log.e(TAG, "tvWorkPlace is null!");
+            if (btnClockInOut == null) Log.e(TAG, "btnClockInOut is null!");
+            if (mapView == null) Log.e(TAG, "mapView is null!");
 
-        NaverMapSdk.getInstance(requireContext()).setClient(new NaverMapSdk.NaverCloudPlatformClient("s7yxuuh84o"));
-        mapView.onCreate(savedInstanceState);
-        mapView.getMapAsync(this);
+            if (btnClockInOut != null) {
+                btnClockInOut.setEnabled(false);
+                btnClockInOut.setText("위치 확인 중...");
+            }
+
+            Log.d(TAG, "initializeViews: Initializing NaverMap SDK");
+            NaverMapSdk.getInstance(requireContext()).setClient(new NaverMapSdk.NaverCloudPlatformClient("s7yxuuh84o"));
+            
+            if (mapView != null) {
+                mapView.onCreate(savedInstanceState);
+                mapView.getMapAsync(this);
+                Log.d(TAG, "initializeViews: MapView setup completed");
+            } else {
+                Log.e(TAG, "initializeViews: MapView is null, cannot initialize map");
+            }
+            
+        } catch (Exception e) {
+            Log.e(TAG, "initializeViews: Exception occurred", e);
+            Toast.makeText(requireContext(), "지도 초기화 오류: " + e.getMessage(), Toast.LENGTH_LONG).show();
+        }
     }
 
     private void loadInitialData() {
@@ -245,7 +278,8 @@ public class CommutingRegistrationFragment extends Fragment implements OnMapRead
                 } else {
                     btnClockInOut.setText("출근중");
                 }
-            } else {
+            }
+            else {
                 if (lastLocation != null) {
                     LatLng currentUserLocation = new LatLng(lastLocation);
                     float distance = calculateDistance(currentUserLocation, workplaceLocation);
@@ -359,6 +393,14 @@ public class CommutingRegistrationFragment extends Fragment implements OnMapRead
         Map<String, String> payload = new HashMap<>();
         payload.put("employeeId", employeeId);
 
+        // Asia/Seoul 시간으로 현재 시간 설정
+        Date now = new Date();
+        java.util.TimeZone seoulTimeZone = java.util.TimeZone.getTimeZone("Asia/Seoul");
+        SimpleDateFormat timeFormat = new SimpleDateFormat("HH:mm:ss", Locale.KOREA);
+        timeFormat.setTimeZone(seoulTimeZone);
+        payload.put("endTime", timeFormat.format(now));
+
+
         apiService.clockOut(payload).enqueue(new Callback<CommuteModel>() {
             @Override
             public void onResponse(Call<CommuteModel> call, Response<CommuteModel> response) {
@@ -372,8 +414,8 @@ public class CommutingRegistrationFragment extends Fragment implements OnMapRead
                     Bundle bundle = new Bundle();
                     bundle.putString("employee_id", employeeId);
                     bundle.putString("employee_name", employeeName);
-                    
-                    Calendar cal = Calendar.getInstance();
+
+                    Calendar cal = Calendar.getInstance(java.util.TimeZone.getTimeZone("Asia/Seoul"));
                     bundle.putInt("year", cal.get(Calendar.YEAR));
                     bundle.putInt("month", cal.get(Calendar.MONTH));
 
@@ -391,7 +433,7 @@ public class CommutingRegistrationFragment extends Fragment implements OnMapRead
 
             @Override
             public void onFailure(Call<CommuteModel> call, Throwable t) {
-                Log.e(TAG, "Error during clock-out.", t);
+                Log.e(TAG, "Error during clock-out.", t);햣
                 Toast.makeText(getContext(), "퇴근 등록 중 오류가 발생했습니다.", Toast.LENGTH_SHORT).show();
             }
         });

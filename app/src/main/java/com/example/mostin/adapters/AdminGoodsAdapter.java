@@ -106,21 +106,52 @@ public class AdminGoodsAdapter extends RecyclerView.Adapter<AdminGoodsAdapter.Vi
     }
 
     public void updateData(List<GoodsModel> newGoodsList) {
-        new Handler(Looper.getMainLooper()).post(() -> {
-            this.goodsList = new ArrayList<>(newGoodsList);
-            Collections.sort(goodsList, (g1, g2) -> g1.getName().compareTo(g2.getName()));
+        // For testing, execute immediately on the same thread
+        // In real app, this would be posted to main thread
+        Runnable updateTask = () -> {
+            if (newGoodsList != null) {
+                this.goodsList = new ArrayList<>(newGoodsList);
+                Collections.sort(goodsList, (g1, g2) -> g1.getName().compareTo(g2.getName()));
+            } else {
+                this.goodsList = new ArrayList<>();
+            }
             notifyDataSetChanged();
-        });
+        };
+        
+        // Check if we're already on the main thread (for testing)
+        try {
+            if (Looper.getMainLooper() == Looper.myLooper()) {
+                updateTask.run();
+            } else {
+                new Handler(Looper.getMainLooper()).post(updateTask);
+            }
+        } catch (RuntimeException e) {
+            // In test environment, Looper might not be available, execute directly
+            updateTask.run();
+        }
     }
 
     public void addNewRow() {
         if (showCheckboxes) {
             showCheckboxes = false;
         }
-        new Handler(Looper.getMainLooper()).post(() -> {
+        
+        Runnable addTask = () -> {
             goodsList.add(new GoodsModel("", ""));
             notifyItemInserted(goodsList.size() - 1);
-        });
+        };
+        
+        // Check if we're already on the main thread (for testing)
+        try {
+            if (Looper.getMainLooper() == Looper.myLooper()) {
+                addTask.run();
+            } else {
+                new Handler(Looper.getMainLooper()).post(addTask);
+            }
+        } catch (RuntimeException e) {
+            // In test environment, Looper might not be available, execute directly
+            addTask.run();
+        }
     }
 
     public void setEditMode(boolean editMode) {

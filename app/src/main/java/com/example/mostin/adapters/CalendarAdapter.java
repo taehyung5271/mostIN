@@ -81,7 +81,7 @@ public class CalendarAdapter extends RecyclerView.Adapter<CalendarAdapter.Calend
     }
 
     private String getAttendanceInfo(DateModel date) {
-        if (date.getClockInTime() == null) {
+        if (date.getClockInTime() == null || date.getClockInTime().isEmpty() || date.getClockInTime().length() < 5) {
             return "출근하지 않았습니다";
         }
 
@@ -90,7 +90,7 @@ public class CalendarAdapter extends RecyclerView.Adapter<CalendarAdapter.Calend
             info.append("출근시간 - ").append(date.getClockInTime().substring(0, 5));
         }
 
-        if (date.getClockOutTime() != null && date.getClockOutTime().length() >= 5) {
+        if (date.getClockOutTime() != null && !date.getClockOutTime().isEmpty() && date.getClockOutTime().length() >= 5) {
             info.append("\n퇴근시간 - ").append(date.getClockOutTime().substring(0, 5));
         }
 

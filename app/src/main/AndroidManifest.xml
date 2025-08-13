@@ -26,6 +26,7 @@
         <activity
             android:name="com.example.mostin.activities.HomeScreen"
             android:exported="false"
+            android:windowSoftInputMode="adjustPan"
             android:theme="@style/SplashTheme"/>
         <meta-data
             android:name="com.naver.maps.map.CLIENT_ID"

@@ -28,14 +28,14 @@ public class OrderHistoryAdapter extends RecyclerView.Adapter<OrderHistoryAdapte
     }
 
     public void setOrderHistory(List<OrderHistoryModel> orderHistory, String workPlaceName) {
-        this.orderHistory = orderHistory;
+        this.orderHistory = orderHistory != null ? new ArrayList<>(orderHistory) : new ArrayList<>();
         this.workPlaceName = workPlaceName;
         notifyDataSetChanged();
     }
 
     public void clearData() {
         this.orderHistory.clear();
-        this.workPlaceName = null; // Clear workplace name as well
+        // Don't clear workPlaceName to maintain consistency
         notifyDataSetChanged();
     }
 

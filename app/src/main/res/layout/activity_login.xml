@@ -1,35 +1,167 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<androidx.constraintlayout.widget.ConstraintLayout 
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:orientation="vertical"
-    android:padding="16dp"
-    android:gravity="center">
-    <ImageView
-        android:layout_width="350dp"
-        android:layout_height="wrap_content"
-        android:src="@drawable/mostin"
-        android:layout_marginBottom="40dp"/>
-    <EditText
-        android:id="@+id/edit_text_id"
-        android:layout_width="350dp"
-        android:layout_height="wrap_content"
-        android:hint="아이디"
-        android:inputType="text"
-        android:layout_marginBottom="8dp"/>
+    android:background="@color/surface_container_lowest">
 
-    <EditText
-        android:id="@+id/edit_text_password"
-        android:layout_width="350dp"
-        android:layout_height="wrap_content"
-        android:hint="비밀번호"
-        android:inputType="textPassword"
-        android:layout_marginBottom="16dp"/>
+    <!-- Background gradient overlay -->
+    <View
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:background="@drawable/login_gradient_background"
+        app:layout_constraintTop_toTopOf="parent"/>
 
-    <Button
-        android:id="@+id/btn_login"
-        android:layout_width="350dp"
+    <!-- Logo Container with modern card design -->
+    <com.google.android.material.card.MaterialCardView
+        android:id="@+id/logo_card"
+        android:layout_width="0dp"
         android:layout_height="wrap_content"
-        android:text="로그인"/>
+        android:layout_marginHorizontal="32dp"
+        android:layout_marginTop="120dp"
+        app:cardCornerRadius="24dp"
+        app:cardElevation="8dp"
+        app:cardBackgroundColor="@color/surface"
+        app:strokeColor="@color/outline_variant"
+        app:strokeWidth="1dp"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent">
+        
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:padding="24dp"
+            android:gravity="center">
+            
+            <ImageView
+                android:layout_width="120dp"
+                android:layout_height="60dp"
+                android:src="@drawable/mostin"
+                android:contentDescription="MostIN Logo"
+                android:layout_marginBottom="16dp"/>
+                
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="직원 관리 시스템"
+                android:textAppearance="@style/TextAppearance.Material3.BodyLarge"
+                android:textColor="@color/on_surface_variant"
+                android:fontFamily="@font/pretendard_medium"/>
+                
+        </LinearLayout>
+    </com.google.android.material.card.MaterialCardView>
 
-</LinearLayout>
+    <!-- Login Form Container -->
+    <com.google.android.material.card.MaterialCardView
+        android:id="@+id/login_form_card"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_marginHorizontal="32dp"
+        android:layout_marginTop="32dp"
+        app:cardCornerRadius="20dp"
+        app:cardElevation="4dp"
+        app:cardBackgroundColor="@color/surface"
+        app:strokeColor="@color/outline_variant"
+        app:strokeWidth="1dp"
+        app:layout_constraintTop_toBottomOf="@id/logo_card"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent">
+        
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:padding="24dp">
+
+            <!-- ID Input Field -->
+            <com.google.android.material.textfield.TextInputLayout
+                android:id="@+id/text_input_layout_id"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="16dp"
+                android:hint="아이디"
+                app:startIconDrawable="@drawable/ic_person_24"
+                app:startIconTint="@color/primary"
+                app:hintTextColor="@color/primary"
+                app:boxStrokeColor="@color/primary"
+                app:boxCornerRadiusTopStart="12dp"
+                app:boxCornerRadiusTopEnd="12dp"
+                app:boxCornerRadiusBottomStart="12dp"
+                app:boxCornerRadiusBottomEnd="12dp"
+                style="@style/Widget.Material3.TextInputLayout.OutlinedBox">
+                
+                <com.google.android.material.textfield.TextInputEditText
+                    android:id="@+id/edit_text_id"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:inputType="text"
+                    android:fontFamily="@font/pretendard_regular"
+                    android:textAppearance="@style/TextAppearance.Material3.BodyLarge"/>
+                    
+            </com.google.android.material.textfield.TextInputLayout>
+
+            <!-- Password Input Field -->
+            <com.google.android.material.textfield.TextInputLayout
+                android:id="@+id/text_input_layout_password"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="24dp"
+                android:hint="비밀번호"
+                app:startIconDrawable="@drawable/ic_lock_24"
+                app:startIconTint="@color/primary"
+                app:endIconMode="password_toggle"
+                app:endIconTint="@color/primary"
+                app:hintTextColor="@color/primary"
+                app:boxStrokeColor="@color/primary"
+                app:boxCornerRadiusTopStart="12dp"
+                app:boxCornerRadiusTopEnd="12dp"
+                app:boxCornerRadiusBottomStart="12dp"
+                app:boxCornerRadiusBottomEnd="12dp"
+                style="@style/Widget.Material3.TextInputLayout.OutlinedBox">
+                
+                <com.google.android.material.textfield.TextInputEditText
+                    android:id="@+id/edit_text_password"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:inputType="textPassword"
+                    android:fontFamily="@font/pretendard_regular"
+                    android:textAppearance="@style/TextAppearance.Material3.BodyLarge"/>
+                    
+            </com.google.android.material.textfield.TextInputLayout>
+
+            <!-- Login Button -->
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btn_login"
+                android:layout_width="match_parent"
+                android:layout_height="56dp"
+                android:text="로그인"
+                android:textAppearance="@style/TextAppearance.Material3.LabelLarge"
+                android:fontFamily="@font/pretendard_semibold"
+                app:cornerRadius="16dp"
+                app:backgroundTint="@color/primary"
+                app:rippleColor="@color/primary_container"
+                app:icon="@drawable/ic_login_24"
+                app:iconGravity="textStart"
+                app:iconPadding="8dp"
+                style="@style/Widget.Material3.Button"/>
+                
+        </LinearLayout>
+    </com.google.android.material.card.MaterialCardView>
+
+    <!-- Bottom decoration -->
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginBottom="32dp"
+        android:text="© 2024 MostIN. All rights reserved."
+        android:textAppearance="@style/TextAppearance.Material3.BodySmall"
+        android:textColor="@color/on_surface_variant"
+        android:fontFamily="@font/pretendard_regular"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"/>
+
+</androidx.constraintlayout.widget.ConstraintLayout>

@@ -70,7 +70,7 @@ public class AttendanceCalendarFragment extends Fragment {
         }
 
         textCurrentMonth = view.findViewById(R.id.text_current_month);
-        recyclerCalendar = view.findViewById(R.id.recycler_calendar);
+        recyclerCalendar = view.findViewById(R.id.calendar_grid);
 
         view.findViewById(R.id.btn_previous_month).setOnClickListener(v -> changeMonth(-1));
         view.findViewById(R.id.btn_next_month).setOnClickListener(v -> changeMonth(1));
