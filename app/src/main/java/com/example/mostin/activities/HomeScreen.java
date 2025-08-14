@@ -30,6 +30,7 @@ import com.example.mostin.fragments.AttendanceCalendarFragment;
 import com.example.mostin.fragments.OrderingFragment;
 import com.example.mostin.fragments.UserOrderHistoryFragment;
 import com.example.mostin.activities.AdminHomeScreen;
+import com.example.mostin.utils.SessionManager;
 
 import org.w3c.dom.Text;
 
@@ -45,6 +46,7 @@ public class HomeScreen extends AppCompatActivity implements NavigationView.OnNa
     private Toolbar toolbar;
     private TextView fragmentTitle;
     private TextView collapsingTitle;
+    private SessionManager sessionManager;
 
     // 사용자 정보를 저장할 변수들
     private String employeeId;
@@ -56,6 +58,9 @@ public class HomeScreen extends AppCompatActivity implements NavigationView.OnNa
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_home_screen);
+
+        // SessionManager 초기화
+        sessionManager = new SessionManager(this);
 
         // LoginActivity에서 전달받은 사용자 정보 저장
         Intent intent = getIntent();
@@ -280,7 +285,12 @@ public class HomeScreen extends AppCompatActivity implements NavigationView.OnNa
             drawerLayout.closeDrawers();
             return true;
         } else if (itemId == R.id.nav_logout) {
+            // 세션 정리 후 로그아웃
+            sessionManager.logout();
+            Log.d("HomeScreen", "User logged out, session cleared");
+            
             Intent intent = new Intent(this, LoginActivity.class);
+            intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
             startActivity(intent);
             finish();
             drawerLayout.closeDrawers();

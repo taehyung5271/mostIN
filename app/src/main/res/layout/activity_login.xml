@@ -132,6 +132,18 @@
                     
             </com.google.android.material.textfield.TextInputLayout>
 
+            <!-- Auto Login Checkbox -->
+            <CheckBox
+                android:id="@+id/checkbox_auto_login"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="16dp"
+                android:text="자동 로그인"
+                android:textAppearance="@style/TextAppearance.Material3.BodyMedium"
+                android:textColor="@color/on_surface"
+                android:fontFamily="@font/pretendard_regular"
+                app:buttonTint="@color/primary"/>
+
             <!-- Login Button -->
             <com.google.android.material.button.MaterialButton
                 android:id="@+id/btn_login"
@@ -150,6 +162,33 @@
                 
         </LinearLayout>
     </com.google.android.material.card.MaterialCardView>
+
+    <!-- Loading indicator for auto login -->
+    <com.google.android.material.progressindicator.CircularProgressIndicator
+        android:id="@+id/progress_auto_login"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:visibility="gone"
+        app:indicatorColor="@color/primary"
+        app:trackColor="@color/primary_container"
+        app:layout_constraintTop_toBottomOf="@id/login_form_card"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        android:layout_marginTop="24dp"/>
+
+    <TextView
+        android:id="@+id/text_auto_login_status"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="자동 로그인 중..."
+        android:textAppearance="@style/TextAppearance.Material3.BodyMedium"
+        android:textColor="@color/primary"
+        android:fontFamily="@font/pretendard_medium"
+        android:visibility="gone"
+        app:layout_constraintTop_toBottomOf="@id/progress_auto_login"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        android:layout_marginTop="8dp"/>
 
     <!-- Bottom decoration -->
     <TextView

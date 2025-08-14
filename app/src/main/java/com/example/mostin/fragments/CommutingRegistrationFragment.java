@@ -433,7 +433,7 @@ public class CommutingRegistrationFragment extends Fragment implements OnMapRead
 
             @Override
             public void onFailure(Call<CommuteModel> call, Throwable t) {
-                Log.e(TAG, "Error during clock-out.", t);햣
+                Log.e(TAG, "Error during clock-out.", t);
                 Toast.makeText(getContext(), "퇴근 등록 중 오류가 발생했습니다.", Toast.LENGTH_SHORT).show();
             }
         });
