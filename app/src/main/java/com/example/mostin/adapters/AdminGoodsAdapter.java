@@ -8,8 +8,8 @@ import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.CheckBox;
-import android.widget.EditText;
 import com.google.android.material.textfield.TextInputEditText;
+import com.google.android.material.button.MaterialButton;
 import android.util.Log;
 
 import androidx.annotation.NonNull;
@@ -18,12 +18,6 @@ import androidx.recyclerview.widget.RecyclerView;
 import com.example.mostin.R;
 import com.example.mostin.models.GoodsModel;
 import com.example.mostin.fragments.AdminGoodsFragment;
-
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Set;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -44,6 +38,7 @@ public class AdminGoodsAdapter extends RecyclerView.Adapter<RecyclerView.ViewHol
     private Set<String> selectedItems = new HashSet<>();
     private boolean hasTempData = false; // 임시 데이터 존재 여부 추적
     private AdminGoodsFragment parentFragment; // 부모 프래그먼트 참조
+    private int firstNewItemPosition = -1; // 등록 모드에서 첫 번째 새 필드(A)의 위치
 
     public AdminGoodsAdapter(List<GoodsModel> goodsList) {
         this.goodsList = goodsList;
@@ -83,7 +78,12 @@ public class AdminGoodsAdapter extends RecyclerView.Adapter<RecyclerView.ViewHol
             AddButtonViewHolder addHolder = (AddButtonViewHolder) holder;
             addHolder.btnAddMore.setOnClickListener(v -> {
                 addNewRow();
-                // 새로 추가된 아이템에 자동 포커스는 Fragment에서 처리
+                // 새로 추가된 아이템에 자동 포커스 및 키보드 표시를 Fragment에 요청
+                if (parentFragment != null) {
+                    // 새로 추가된 아이템의 위치 (현재 리스트 크기 - 1)
+                    int newItemPosition = goodsList.size() - 1;
+                    parentFragment.requestAutoFocusForNewItem(newItemPosition);
+                }
             });
         } else if (holder instanceof ViewHolder) {
             ViewHolder productHolder = (ViewHolder) holder;
@@ -99,20 +99,74 @@ public class AdminGoodsAdapter extends RecyclerView.Adapter<RecyclerView.ViewHol
         boolean isNewItem = position >= originalDataSize; // 새로 추가된 아이템인지 확인
         
         if (currentMode == 1) { // 등록 모드
-            // 기존 데이터는 비활성화, 새 데이터만 활성화
-            productHolder.barcodeEdit.setEnabled(isNewItem);
-            productHolder.nameEdit.setEnabled(isNewItem);
-            Log.d("AdminGoodsAdapter", "등록 모드 - 위치: " + position + ", 원본크기: " + originalDataSize + ", 새아이템: " + isNewItem + ", 활성화: " + isNewItem);
+            // 기존 데이터는 완전히 편집 불가능, 새 데이터는 편집 가능
+            if (!isNewItem) {
+                // 기존 데이터는 완전히 비활성화 (편집 불가능)
+                productHolder.barcodeEdit.setEnabled(false);
+                productHolder.nameEdit.setEnabled(false);
+                productHolder.barcodeEdit.setKeyListener(null); // 키보드 입력 차단
+                productHolder.nameEdit.setKeyListener(null); // 키보드 입력 차단
+                productHolder.barcodeEdit.setFocusable(false);
+                productHolder.nameEdit.setFocusable(false);
+                productHolder.barcodeEdit.setFocusableInTouchMode(false);
+                productHolder.nameEdit.setFocusableInTouchMode(false);
+                // 편집 불가능 필드는 키보드가 올라오지 않도록 설정
+                productHolder.barcodeEdit.setShowSoftInputOnFocus(false);
+                productHolder.nameEdit.setShowSoftInputOnFocus(false);
+            } else {
+                // 새 데이터는 편집 가능하도록 활성화
+                productHolder.barcodeEdit.setEnabled(true);
+                productHolder.nameEdit.setEnabled(true);
+                productHolder.barcodeEdit.setKeyListener(android.text.method.DigitsKeyListener.getInstance());
+                productHolder.nameEdit.setKeyListener(android.text.method.TextKeyListener.getInstance());
+                productHolder.barcodeEdit.setFocusable(true);
+                productHolder.nameEdit.setFocusable(true);
+                productHolder.barcodeEdit.setFocusableInTouchMode(true);
+                productHolder.nameEdit.setFocusableInTouchMode(true);
+                // 새 필드는 키보드가 정상적으로 올라오도록 설정
+                productHolder.barcodeEdit.setShowSoftInputOnFocus(true);
+                productHolder.nameEdit.setShowSoftInputOnFocus(true);
+            }
+            Log.d("AdminGoodsAdapter", "등록 모드 - 위치: " + position + ", 원본크기: " + originalDataSize + ", 새아이템: " + isNewItem + ", 활성화: true, 읽기전용: " + (!isNewItem));
             
         } else if (currentMode == 2) { // 편집 모드
             // 모든 데이터 편집 가능
             productHolder.barcodeEdit.setEnabled(true);
             productHolder.nameEdit.setEnabled(true);
+            // 키보드 입력 복원
+            productHolder.barcodeEdit.setKeyListener(android.text.method.DigitsKeyListener.getInstance());
+            productHolder.nameEdit.setKeyListener(android.text.method.TextKeyListener.getInstance());
+            // 편집 모드에서는 모든 필드에서 키보드가 정상적으로 올라오도록 설정
+            productHolder.barcodeEdit.setShowSoftInputOnFocus(true);
+            productHolder.nameEdit.setShowSoftInputOnFocus(true);
         } else { // 일반 모드 및 삭제 모드
             // 모든 EditText 비활성화
             productHolder.barcodeEdit.setEnabled(false);
             productHolder.nameEdit.setEnabled(false);
+            // 키보드 입력 차단
+            productHolder.barcodeEdit.setKeyListener(null);
+            productHolder.nameEdit.setKeyListener(null);
+            // 비활성화된 필드는 키보드가 올라오지 않도록 설정
+            productHolder.barcodeEdit.setShowSoftInputOnFocus(false);
+            productHolder.nameEdit.setShowSoftInputOnFocus(false);
         }
+        
+        // 마이너스 버튼 표시 조건: 등록 모드이고 상품 추가 버튼으로 생성된 아이템
+        // 첫 번째 새 필드(A)는 제외하고, 상품 추가 버튼으로 생성된 필드들(B, C, D...)에만 마이너스 버튼 표시
+        boolean isAddedByPlusButton = (currentMode == 1) && (position > firstNewItemPosition) && (firstNewItemPosition >= 0);
+        productHolder.btnRemove.setVisibility(isAddedByPlusButton ? View.VISIBLE : View.GONE);
+        
+        // 마이너스 버튼 클릭 이벤트
+        productHolder.btnRemove.setOnClickListener(v -> {
+            if (position < goodsList.size()) {
+                removeItem(position);
+            }
+        });
+        
+        Log.d("AdminGoodsAdapter", "📍 위치: " + position + ", 원본크기: " + originalDataSize + 
+              ", 첫새필드위치: " + firstNewItemPosition + ", 새아이템: " + isNewItem + 
+              ", 플러스버튼생성: " + isAddedByPlusButton + ", 모드: " + currentMode + 
+              ", 바코드: '" + goods.getBarcode() + "'");
         
         productHolder.barcodeWatcher = new TextWatcher() {
             @Override
@@ -143,6 +197,12 @@ public class AdminGoodsAdapter extends RecyclerView.Adapter<RecyclerView.ViewHol
         productHolder.barcodeEdit.addTextChangedListener(productHolder.barcodeWatcher);
         productHolder.nameEdit.addTextChangedListener(productHolder.nameWatcher);
         
+        // EditText 포커스 리스너 추가 (편집 모드와 등록 모드에서 키보드 패딩 지원)
+        if (currentMode == 1 || currentMode == 2) { // 등록 모드 또는 편집 모드
+            setupEditTextFocusListener(productHolder.barcodeEdit, position);
+            setupEditTextFocusListener(productHolder.nameEdit, position);
+        }
+        
         productHolder.checkbox.setVisibility(showCheckboxes ? View.VISIBLE : View.GONE);
         productHolder.checkbox.setChecked(selectedItems.contains(goods.getBarcode()));
         
@@ -167,8 +227,8 @@ public class AdminGoodsAdapter extends RecyclerView.Adapter<RecyclerView.ViewHol
         // In real app, this would be posted to main thread
         Runnable updateTask = () -> {
             if (newGoodsList != null) {
-                // 편집 모드나 등록 모드 중에는 originalDataSize 보존
-                boolean preserveOriginalSize = (originalDataSize > 0 && isEditMode);
+                // 등록 모드일 때는 절대로 originalDataSize를 변경하지 않음
+                boolean preserveOriginalSize = (currentMode == 1) || (originalDataSize > 0 && isEditMode);
                 
                 this.goodsList = new ArrayList<>(newGoodsList);
                 this.originalGoodsList = new ArrayList<>(newGoodsList); // 원본 저장
@@ -177,7 +237,7 @@ public class AdminGoodsAdapter extends RecyclerView.Adapter<RecyclerView.ViewHol
                     this.originalDataSize = newGoodsList.size(); // 원본 크기 저장
                     Log.d("AdminGoodsAdapter", "🔄 updateData() 호출 - 새 원본 크기 설정: " + originalDataSize);
                 } else {
-                    Log.d("AdminGoodsAdapter", "🔄 updateData() 호출 - 편집 모드로 인해 원본 크기 보존: " + originalDataSize);
+                    Log.d("AdminGoodsAdapter", "🔄 updateData() 호출 - 모드 " + currentMode + "로 인해 원본 크기 보존: " + originalDataSize + " (새 데이터 크기: " + newGoodsList.size() + ")");
                 }
                 
                 Collections.sort(goodsList, (g1, g2) -> g1.getName().compareTo(g2.getName()));
@@ -228,17 +288,6 @@ public class AdminGoodsAdapter extends RecyclerView.Adapter<RecyclerView.ViewHol
         }
     }
 
-    /**
-     * @deprecated setMode() 메서드를 대신 사용하세요
-     */
-    @Deprecated
-    public void setEditMode(boolean editMode) {
-        isEditMode = editMode;
-        if (showCheckboxes) {
-            showCheckboxes = false;
-        }
-        notifyDataSetChanged();
-    }
     
     /**
      * 모드 설정 (0: 일반, 1: 등록, 2: 편집, 3: 삭제)
@@ -249,11 +298,28 @@ public class AdminGoodsAdapter extends RecyclerView.Adapter<RecyclerView.ViewHol
         
         Log.d("AdminGoodsAdapter", "🔄 모드 변경: " + previousMode + " → " + mode + " (원본크기: " + originalDataSize + ", 전체크기: " + goodsList.size() + ")");
         
+        // 등록 모드로 진입할 때 현재 데이터 크기를 원본 크기로 설정
+        if (previousMode != 1 && mode == 1) {
+            // 등록 모드 진입 시 현재 데이터 크기를 원본 크기로 고정
+            this.originalDataSize = goodsList.size();
+            this.firstNewItemPosition = goodsList.size(); // 첫 번째 새 필드 위치 기록
+            Log.d("AdminGoodsAdapter", "✅ 등록 모드 진입 - originalDataSize 설정: " + originalDataSize + ", 첫 번째 새 필드 위치: " + firstNewItemPosition);
+            
+            // 첫 번째 새 필드 추가
+            addNewRow();
+            Log.d("AdminGoodsAdapter", "➕ 등록 모드 진입 - 첫 번째 새 필드(A) 자동 추가 (새 전체크기: " + goodsList.size() + ")");
+        }
+        
         // 모드 전환 시 임시 데이터 정리
         if (previousMode == 1 && mode != 1) {
             // 등록 모드에서 다른 모드로 전환할 때 새로 생긴 빈 텍스트필드 제거
             removeEmptyItems();
-            Log.d("AdminGoodsAdapter", "등록 모드 종료 - 빈 텍스트필드 제거 완료");
+            firstNewItemPosition = -1; // 첫 번째 새 필드 위치 초기화
+            Log.d("AdminGoodsAdapter", "등록 모드 종료 - 빈 텍스트필드 제거 완료, 첫 번째 새 필드 위치 초기화");
+        } else if (previousMode == 2 && mode != 2) {
+            // 편집 모드에서 다른 모드로 전환할 때 부분적으로 빈 상품 자동 정리
+            removePartiallyEmptyItems();
+            Log.d("AdminGoodsAdapter", "편집 모드 종료 - 부분적으로 빈 상품 자동 정리 완료");
         }
         
         // 편집 모드 설정 (등록 모드와 편집 모드에서만 true)
@@ -270,17 +336,6 @@ public class AdminGoodsAdapter extends RecyclerView.Adapter<RecyclerView.ViewHol
         notifyDataSetChanged();
     }
 
-    /**
-     * @deprecated setMode() 메서드를 대신 사용하세요
-     */
-    @Deprecated
-    public void showCheckboxes(boolean show) {
-        showCheckboxes = show;
-        if (!show) {
-            selectedItems.clear();
-        }
-        notifyDataSetChanged();
-    }
 
     public GoodsModel getNewItem() {
         if (goodsList.isEmpty()) return null;
@@ -343,6 +398,31 @@ public class AdminGoodsAdapter extends RecyclerView.Adapter<RecyclerView.ViewHol
 
     public List<String> getSelectedItems() {
         return new ArrayList<>(selectedItems);
+    }
+
+    /**
+     * 원본 데이터 크기 반환 (포커스 설정용)
+     */
+    public int getOriginalDataSize() {
+        return originalDataSize;
+    }
+
+    /**
+     * 첫 번째 새 필드에 포커스 요청 (어댑터에서 직접 처리)
+     */
+    public void requestFocusOnFirstNewItem() {
+        if (firstNewItemPosition >= 0 && firstNewItemPosition < goodsList.size()) {
+            Log.d("AdminGoodsAdapter", "🎯 첫 번째 새 필드에 포커스 요청: 위치 " + firstNewItemPosition);
+            
+            // RecyclerView에서 해당 위치로 스크롤 및 포커스 설정을 Fragment에서 처리하도록 콜백
+            if (parentFragment != null) {
+                parentFragment.getView().post(() -> {
+                    parentFragment.scrollToPositionAndFocus(firstNewItemPosition);
+                });
+            }
+        } else {
+            Log.w("AdminGoodsAdapter", "❌ 첫 번째 새 필드 위치가 유효하지 않음: " + firstNewItemPosition);
+        }
     }
 
     /**
@@ -430,13 +510,14 @@ public class AdminGoodsAdapter extends RecyclerView.Adapter<RecyclerView.ViewHol
 
     /**
      * 빈 아이템들 제거 (등록 완료 후 정리) - 새로 추가된 아이템 중 빈 것들만
+     * 조건: 바코드 AND 상품명이 둘 다 비어있는 경우 삭제
      */
     public void removeEmptyItems() {
         Runnable removeTask = () -> {
             // 역순으로 제거해서 인덱스 문제 방지
             for (int i = goodsList.size() - 1; i >= originalDataSize; i--) {
                 GoodsModel item = goodsList.get(i);
-                if (item.getBarcode().trim().isEmpty() || item.getName().trim().isEmpty()) {
+                if (item.getBarcode().trim().isEmpty() && item.getName().trim().isEmpty()) {
                     goodsList.remove(i);
                     notifyItemRemoved(i);
                     Log.d("AdminGoodsAdapter", "빈 아이템 제거됨: " + i);
@@ -456,17 +537,343 @@ public class AdminGoodsAdapter extends RecyclerView.Adapter<RecyclerView.ViewHol
         }
     }
 
+    /**
+     * 부분적으로 비어있는 아이템들 제거 (모드 종료 시 자동 정리)
+     * 조건: 바코드 OR 상품명 중 하나라도 비어있는 경우 삭제 (더 엄격한 조건)
+     * 예외: 현재 포커스된 아이템과 등록 모드의 첫 번째 새 필드(A)는 보호
+     */
+    public void removePartiallyEmptyItems() {
+        if (parentFragment == null) {
+            Log.w("AdminGoodsAdapter", "parentFragment가 null이므로 부분 정리 건너뜀");
+            return;
+        }
 
-    static class ViewHolder extends RecyclerView.ViewHolder {
-        TextInputEditText barcodeEdit, nameEdit;
-        CheckBox checkbox;
-        TextWatcher barcodeWatcher, nameWatcher;
+        Runnable removeTask = () -> {
+            int removedCount = 0;
+            
+            // 현재 포커스된 EditText의 위치 찾기
+            int currentFocusPosition = getCurrentFocusedPosition();
+            
+            // 역순으로 제거해서 인덱스 문제 방지
+            for (int i = goodsList.size() - 1; i >= 0; i--) {
+                GoodsModel item = goodsList.get(i);
+                String barcode = item.getBarcode() != null ? item.getBarcode().trim() : "";
+                String name = item.getName() != null ? item.getName().trim() : "";
+                
+                // 삭제 조건: 바코드 OR 상품명 중 하나라도 비어있음
+                boolean isEmpty = barcode.isEmpty() || name.isEmpty();
+                
+                // 보호 조건 확인
+                boolean isProtected = false;
+                
+                // 1. 현재 포커스된 아이템은 보호
+                if (i == currentFocusPosition) {
+                    isProtected = true;
+                    Log.d("AdminGoodsAdapter", "현재 포커스된 아이템 보호: " + i);
+                }
+                
+                // 2. 등록 모드의 첫 번째 새 필드(A)는 보호 (최소 1개 입력 필드 유지)
+                if (currentMode == 1 && i == firstNewItemPosition && firstNewItemPosition >= 0) {
+                    isProtected = true;
+                    Log.d("AdminGoodsAdapter", "등록 모드의 첫 번째 새 필드(A) 보호: " + i);
+                }
+                
+                // 삭제 실행
+                if (isEmpty && !isProtected) {
+                    goodsList.remove(i);
+                    notifyItemRemoved(i);
+                    removedCount++;
+                    Log.d("AdminGoodsAdapter", "부분적으로 빈 아이템 제거됨 - 위치: " + i + 
+                          ", 바코드: '" + barcode + "', 상품명: '" + name + "'");
+                } else if (isEmpty && isProtected) {
+                    Log.d("AdminGoodsAdapter", "부분적으로 빈 아이템이지만 보호되어 유지됨 - 위치: " + i + 
+                          ", 바코드: '" + barcode + "', 상품명: '" + name + "'");
+                }
+            }
+            
+            if (removedCount > 0) {
+                hasTempData = false;
+                Log.d("AdminGoodsAdapter", "부분 정리 완료 - " + removedCount + "개 아이템 제거됨");
+            } else {
+                Log.d("AdminGoodsAdapter", "부분 정리 완료 - 제거할 아이템 없음");
+            }
+        };
+        
+        try {
+            if (Looper.getMainLooper() == Looper.myLooper()) {
+                removeTask.run();
+            } else {
+                new Handler(Looper.getMainLooper()).post(removeTask);
+            }
+        } catch (RuntimeException e) {
+            removeTask.run();
+        }
+    }
+
+    /**
+     * 현재 포커스된 EditText의 위치 찾기
+     */
+    private int getCurrentFocusedPosition() {
+        if (parentFragment == null || parentFragment.getActivity() == null) {
+            return -1;
+        }
+
+        android.view.View currentFocus = parentFragment.getActivity().getCurrentFocus();
+        if (!(currentFocus instanceof TextInputEditText)) {
+            return -1;
+        }
+
+        // RecyclerView에서 해당 EditText가 포함된 ViewHolder 찾기
+        android.view.View itemView = currentFocus;
+        while (itemView != null && itemView.getParent() != null) {
+            if (itemView.getParent() instanceof RecyclerView) {
+                RecyclerView recyclerView = (RecyclerView) itemView.getParent();
+                RecyclerView.ViewHolder viewHolder = recyclerView.getChildViewHolder(itemView);
+                if (viewHolder != null) {
+                    int position = viewHolder.getAdapterPosition();
+                    Log.d("AdminGoodsAdapter", "현재 포커스된 위치: " + position);
+                    return position;
+                }
+                break;
+            }
+            if (itemView.getParent() instanceof android.view.View) {
+                itemView = (android.view.View) itemView.getParent();
+            } else {
+                break;
+            }
+        }
+
+        return -1;
+    }
+
+    /**
+     * EditText 스마트 터치 및 포커스 리스너 설정
+     */
+    private void setupEditTextFocusListener(TextInputEditText editText, int position) {
+        if (editText == null || parentFragment == null) return;
+        
+        // 포커스 변경 리스너
+        editText.setOnFocusChangeListener((v, hasFocus) -> {
+            Log.d("AdminGoodsAdapter", "🎯 EditText 포커스 변경 - 위치: " + position + ", 포커스: " + hasFocus);
+            
+            if (hasFocus && !parentFragment.isScrolling()) {
+                // 키보드 표시 및 패딩 적용
+                showKeyboardAndApplyPadding(editText);
+            }
+        });
+        
+        // 개선된 터치 리스너 - 스크롤과 편집 의도를 더 정확하게 구분
+        editText.setOnTouchListener(new SmartTouchListener(editText, position));
+    }
+    
+    /**
+     * 키보드 표시 및 패딩 적용
+     */
+    private void showKeyboardAndApplyPadding(TextInputEditText editText) {
+        if (parentFragment.getView() != null) {
+            parentFragment.getView().post(() -> {
+                parentFragment.applyKeyboardPaddingFromAdapter();
+            });
+        }
+        
+        // 키보드 표시
+        android.content.Context context = editText.getContext();
+        android.view.inputmethod.InputMethodManager imm = 
+            (android.view.inputmethod.InputMethodManager) context.getSystemService(android.content.Context.INPUT_METHOD_SERVICE);
+        if (imm != null) {
+            imm.showSoftInput(editText, android.view.inputmethod.InputMethodManager.SHOW_IMPLICIT);
+        }
+    }
+    
+    /**
+     * 스마트 터치 리스너 - 스크롤과 편집 의도를 정확하게 구분하고 하단 필드 처리
+     */
+    private class SmartTouchListener implements android.view.View.OnTouchListener {
+        private final TextInputEditText editText;
+        private final int position;
+        
+        private float startX = 0, startY = 0;
+        private long startTime = 0;
+        private boolean possibleScroll = false;
+        private boolean definiteScroll = false;
+        
+        public SmartTouchListener(TextInputEditText editText, int position) {
+            this.editText = editText;
+            this.position = position;
+        }
+        
+        @Override
+        public boolean onTouch(android.view.View v, android.view.MotionEvent event) {
+            switch (event.getAction()) {
+                case android.view.MotionEvent.ACTION_DOWN:
+                    startX = event.getX();
+                    startY = event.getY();
+                    startTime = System.currentTimeMillis();
+                    possibleScroll = false;
+                    definiteScroll = false;
+                    break;
+                    
+                case android.view.MotionEvent.ACTION_MOVE:
+                    float deltaX = Math.abs(event.getX() - startX);
+                    float deltaY = Math.abs(event.getY() - startY);
+                    
+                    // 스크롤 감지 로직 개선
+                    if (deltaY > 20 || deltaX > 30) { // Y축 20px 또는 X축 30px 이상 움직이면 스크롤 가능성
+                        possibleScroll = true;
+                    }
+                    
+                    if (deltaY > 40) { // Y축 40px 이상 움직이면 확실한 스크롤
+                        definiteScroll = true;
+                    }
+                    break;
+                    
+                case android.view.MotionEvent.ACTION_UP:
+                    long duration = System.currentTimeMillis() - startTime;
+                    float totalDelta = Math.abs(event.getY() - startY) + Math.abs(event.getX() - startX);
+                    
+                    // 편집 의도 판단 조건을 더 엄격하게
+                    boolean isEditIntent = !definiteScroll && 
+                                         duration < 250 && // 250ms 이하
+                                         totalDelta < 15 && // 총 움직임 15px 이하
+                                         !parentFragment.isScrolling(); // Fragment 스크롤 상태 확인
+                    
+                    Log.d("AdminGoodsAdapter", String.format(
+                        "터치 분석 - 위치:%d, 시간:%dms, 움직임:%.1fpx, 스크롤상태:%b/%b, 편집의도:%b", 
+                        position, duration, totalDelta, possibleScroll, definiteScroll, isEditIntent));
+                    
+                    if (isEditIntent) {
+                        // 편집 모드 또는 등록 모드에서 기존 데이터 필드에 대한 스마트 처리
+                        if (currentMode == 2 || currentMode == 1) { // 편집 모드 또는 등록 모드
+                            boolean isExistingData = position < originalDataSize;
+                            if (isExistingData) {
+                                Log.d("AdminGoodsAdapter", "📝 기존 데이터 필드 터치 감지 - 스마트 처리 시작 (위치: " + position + ", 모드: " + currentMode + ")");
+                                handleExistingDataFieldTouch(v, position);
+                                return false;
+                            }
+                        }
+                        
+                        // 일반적인 편집 의도 처리 (등록 모드의 새 필드 등)
+                        v.requestFocus();
+                        showKeyboardAndApplyPadding(editText);
+                        Log.d("AdminGoodsAdapter", "✏️ 편집 의도 감지 - 포커스 및 키보드 적용");
+                    } else {
+                        Log.d("AdminGoodsAdapter", "📜 스크롤 또는 의도 불분명 - 키보드 요청 생략");
+                    }
+                    break;
+            }
+            return false; // 다른 터치 이벤트도 처리되도록 함
+        }
+        
+        /**
+         * 하단 필드 여부 판별 - 화면 하단 1/3 영역에 있는 필드를 하단 필드로 판별
+         */
+        private boolean isBottomField(android.view.View view) {
+            if (parentFragment == null || parentFragment.getView() == null) return false;
+            
+            try {
+                // RecyclerView와 화면 정보 가져오기
+                RecyclerView recyclerView = parentFragment.getView().findViewById(R.id.adminGoodsRecyclerView);
+                if (recyclerView == null) return false;
+                
+                // 화면 높이 정보
+                int screenHeight = parentFragment.getResources().getDisplayMetrics().heightPixels;
+                
+                // 현재 키보드 높이 (Fragment에서 추정값 또는 실제값)
+                int keyboardHeight = parentFragment.getEstimatedKeyboardHeight();
+                
+                // 가용한 화면 높이 (키보드 제외)
+                int availableHeight = screenHeight - keyboardHeight;
+                
+                // 하단 영역 계산 (가용 높이의 하단 1/3 + 키보드 높이만큼 위의 영역)
+                int bottomThreshold = (int) (availableHeight * 0.67f); // 상단에서 67% 지점이 하단 영역의 시작점
+                
+                // 입력 필드의 화면상 Y 좌표 계산
+                int[] viewLocation = new int[2];
+                view.getLocationOnScreen(viewLocation);
+                int viewCenterY = viewLocation[1] + (view.getHeight() / 2);
+                
+                boolean isBottom = viewCenterY > bottomThreshold;
+                
+                Log.d("AdminGoodsAdapter", String.format(
+                    "하단필드 판별 - 위치:%d, 화면높이:%d, 키보드높이:%d, 가용높이:%d, 하단임계값:%d, 필드Y:%d, 하단여부:%b", 
+                    position, screenHeight, keyboardHeight, availableHeight, bottomThreshold, viewCenterY, isBottom));
+                
+                return isBottom;
+                
+            } catch (Exception e) {
+                Log.w("AdminGoodsAdapter", "하단 필드 판별 중 오류: " + e.getMessage());
+                return false;
+            }
+        }
+        
+        /**
+         * 기존 데이터 필드 터치 시 특별 처리 - 즉시 패딩 적용 및 정밀 위치 조정
+         */
+        private void handleExistingDataFieldTouch(android.view.View view, int position) {
+            if (parentFragment == null) return;
+            
+            // 1. 즉시 포커스 설정
+            view.requestFocus();
+            Log.d("AdminGoodsAdapter", "🎯 기존 데이터 필드 즉시 포커스 설정 (위치: " + position + ")");
+            
+            // 2. Fragment의 기존 데이터 필드 전용 처리 메서드 호출
+            parentFragment.handleExistingDataFieldTouch(editText, position);
+        }
+    }
+
+    /**
+     * 특정 위치의 아이템 제거 (마이너스 버튼으로 호출)
+     */
+    public void removeItem(int position) {
+        if (position < 0 || position >= goodsList.size()) {
+            Log.w("AdminGoodsAdapter", "잘못된 위치의 아이템 제거 시도: " + position);
+            return;
+        }
+        
+        // 원본 데이터와 첫 번째 새 필드(A)는 제거하지 않도록 보호
+        // firstNewItemPosition 이하는 제거 불가 (기존 데이터 + 첫 번째 새 필드 A)
+        if (position <= firstNewItemPosition || firstNewItemPosition < 0) {
+            Log.w("AdminGoodsAdapter", "원본 데이터 또는 첫 번째 새 필드(A) 제거 시도 차단: " + position + " (첫 번째 새 필드 위치: " + firstNewItemPosition + ")");
+            return;
+        }
+        
+        Runnable removeTask = () -> {
+            GoodsModel removedItem = goodsList.get(position);
+            goodsList.remove(position);
+            notifyItemRemoved(position);
+            // 제거 후 인덱스가 변경되므로 뒤의 아이템들 업데이트
+            notifyItemRangeChanged(position, goodsList.size() - position);
+            
+            Log.d("AdminGoodsAdapter", "아이템 제거됨 - 위치: " + position + 
+                  ", 바코드: " + removedItem.getBarcode() + 
+                  ", 상품명: " + removedItem.getName() + 
+                  ", 남은 개수: " + goodsList.size());
+        };
+        
+        try {
+            if (Looper.getMainLooper() == Looper.myLooper()) {
+                removeTask.run();
+            } else {
+                new Handler(Looper.getMainLooper()).post(removeTask);
+            }
+        } catch (RuntimeException e) {
+            removeTask.run();
+        }
+    }
+
+
+    public static class ViewHolder extends RecyclerView.ViewHolder {
+        public TextInputEditText barcodeEdit, nameEdit;
+        public CheckBox checkbox;
+        public MaterialButton btnRemove;
+        public TextWatcher barcodeWatcher, nameWatcher;
 
         ViewHolder(View itemView) {
             super(itemView);
             barcodeEdit = itemView.findViewById(R.id.barcodeEdit);
             nameEdit = itemView.findViewById(R.id.nameEdit);
             checkbox = itemView.findViewById(R.id.checkbox);
+            btnRemove = itemView.findViewById(R.id.btnRemove);
         }
     }
 

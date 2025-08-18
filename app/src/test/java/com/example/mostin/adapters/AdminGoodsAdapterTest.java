@@ -174,9 +174,9 @@ public class AdminGoodsAdapterTest {
     @Test
     public void should_maintainDataIntegrity_when_multipleOperationsCalled() {
         // Given - Perform multiple operations
-        adapter.setEditMode(true);
-        adapter.showCheckboxes(true);
-        adapter.showCheckboxes(false);
+        adapter.setMode(2); // 편집 모드
+        adapter.setMode(3); // 삭제 모드 (체크박스 표시)
+        adapter.setMode(0); // 일반 모드
         adapter.addNewRow();
         
         List<GoodsModel> newData = Arrays.asList(
@@ -195,10 +195,10 @@ public class AdminGoodsAdapterTest {
     @Test
     public void should_disableCheckboxes_when_setEditModeCalledWithTrue() {
         // Given
-        adapter.showCheckboxes(true);
+        adapter.setMode(3); // 삭제 모드
         
         // When
-        adapter.setEditMode(true);
+        adapter.setMode(2); // 편집 모드
         
         // Then - Should be tested through behavior verification
         // Note: This would need UI interaction testing in integration tests
@@ -208,7 +208,7 @@ public class AdminGoodsAdapterTest {
     @Test
     public void should_disableCheckboxes_when_addNewRowCalled() {
         // Given
-        adapter.showCheckboxes(true);
+        adapter.setMode(3); // 삭제 모드
         
         // When
         adapter.addNewRow();
@@ -220,10 +220,10 @@ public class AdminGoodsAdapterTest {
     @Test
     public void should_clearSelectedItems_when_showCheckboxesCalledWithFalse() {
         // Given
-        adapter.showCheckboxes(true);
+        adapter.setMode(3); // 삭제 모드
         
         // When
-        adapter.showCheckboxes(false);
+        adapter.setMode(0); // 일반 모드
         
         // Then
         List<String> selectedItems = adapter.getSelectedItems();

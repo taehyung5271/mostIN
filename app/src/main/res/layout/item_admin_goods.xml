@@ -18,6 +18,26 @@
         android:layout_marginEnd="8dp"
         android:visibility="gone" />
 
+    <com.google.android.material.button.MaterialButton
+        android:id="@+id/btnRemove"
+        android:layout_width="32dp"
+        android:layout_height="32dp"
+        android:layout_gravity="center_vertical"
+        android:layout_marginEnd="8dp"
+        android:text="−"
+        android:textSize="16sp"
+        android:textColor="@android:color/white"
+        android:backgroundTint="@android:color/holo_red_dark"
+        android:visibility="gone"
+        style="@style/Widget.Material3.Button"
+        app:cornerRadius="16dp"
+        android:minWidth="0dp"
+        android:minHeight="0dp"
+        android:insetTop="0dp"
+        android:insetBottom="0dp"
+        android:paddingStart="0dp"
+        android:paddingEnd="0dp" />
+
 
     <com.google.android.material.textfield.TextInputLayout
         android:layout_width="0dp"

@@ -44,7 +44,7 @@
 
         <activity 
             android:name="com.example.mostin.activities.AdminHomeScreen" 
-            android:windowSoftInputMode="adjustResize|stateAlwaysHidden" />
+            android:windowSoftInputMode="adjustResize" />
     </application>
 
 </manifest>
