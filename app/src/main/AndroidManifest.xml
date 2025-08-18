@@ -42,7 +42,9 @@
             </intent-filter>
         </activity>
 
-        <activity android:name="com.example.mostin.activities.AdminHomeScreen" />
+        <activity 
+            android:name="com.example.mostin.activities.AdminHomeScreen" 
+            android:windowSoftInputMode="adjustResize|stateAlwaysHidden" />
     </application>
 
 </manifest>

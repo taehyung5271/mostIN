@@ -27,6 +27,7 @@ import com.example.mostin.api.ApiService;
 import com.example.mostin.models.EmployeeModel;
 import com.example.mostin.models.WorkPlace;
 import com.example.mostin.utils.AppCache;
+import com.example.mostin.activities.AdminHomeScreen;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -162,14 +163,30 @@ public class EmployeeManagementFragment extends Fragment {
             editPhone.setText(employee.getPhoneNum());
         }
 
+        // 직원 유형 스피너 설정 (신규 추가 시에만)
+        if (!isEditMode) {
+            Spinner spinnerType = dialogView.findViewById(R.id.spinner_employee_type);
+            ArrayAdapter<String> typeAdapter = new ArrayAdapter<>(requireContext(),
+                    android.R.layout.simple_spinner_item,
+                    new String[]{"MD", "SV"});
+            typeAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
+            spinnerType.setAdapter(typeAdapter);
+        }
+
         loadWorkplacesIntoSpinner(spinnerWorkPlace, isEditMode ? employee.getWorkPlaceName() : null);
 
         builder.setView(dialogView)
                 .setTitle(isEditMode ? "직원 정보 수정" : "직원 추가")
                 .setPositiveButton(isEditMode ? "수정" : "추가", (dialog, which) -> {
-                    String name = editName.getText().toString();
-                    String phone = editPhone.getText().toString();
-                    String workPlace = spinnerWorkPlace.getSelectedItem().toString();
+                    String name = editName.getText().toString().trim();
+                    String phone = editPhone.getText().toString().trim();
+                    String workPlace = spinnerWorkPlace.getSelectedItem() != null ? spinnerWorkPlace.getSelectedItem().toString() : "";
+
+                    // 기본 입력 값 검증
+                    if (name.isEmpty() || phone.isEmpty() || workPlace.isEmpty()) {
+                        Toast.makeText(getContext(), "필수 항목을 모두 입력해주세요.", Toast.LENGTH_SHORT).show();
+                        return;
+                    }
 
                     if (isEditMode) {
                         employee.setEmployeeName(name);
@@ -182,13 +199,24 @@ public class EmployeeManagementFragment extends Fragment {
                         Spinner spinnerType = dialogView.findViewById(R.id.spinner_employee_type);
                         EditText editAddress = dialogView.findViewById(R.id.edit_address);
 
-                        String id = editId.getText().toString();
-                        String password = editPassword.getText().toString();
-                        String type = spinnerType.getSelectedItem().toString();
-                        String address = editAddress.getText().toString();
+                        String id = editId.getText().toString().trim();
+                        String password = editPassword.getText().toString().trim();
+                        String type = spinnerType.getSelectedItem() != null ? spinnerType.getSelectedItem().toString() : "";
+                        String address = editAddress.getText().toString().trim();
 
-                        EmployeeModel newEmployee = new EmployeeModel(id, name, password, phone, type, address, workPlace);
-                        createEmployee(newEmployee);
+                        // 입력 값 검증
+                        if (id.isEmpty() || name.isEmpty() || password.isEmpty() || phone.isEmpty()) {
+                            Toast.makeText(getContext(), "필수 항목을 모두 입력해주세요.", Toast.LENGTH_SHORT).show();
+                            return;
+                        }
+
+                        try {
+                            EmployeeModel newEmployee = new EmployeeModel(id, name, password, phone, type, address, workPlace);
+                            createEmployee(newEmployee);
+                        } catch (Exception e) {
+                            Log.e(TAG, "Error creating employee object", e);
+                            Toast.makeText(getContext(), "직원 정보 생성 중 오류가 발생했습니다.", Toast.LENGTH_SHORT).show();
+                        }
                     }
                 })
                 .setNegativeButton("취소", null);
@@ -234,22 +262,32 @@ public class EmployeeManagementFragment extends Fragment {
     }
 
     private void createEmployee(EmployeeModel employee) {
+        if (employee == null) {
+            Toast.makeText(getContext(), "직원 정보가 올바르지 않습니다.", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        Log.d(TAG, "Creating employee: " + employee.getEmployeeId());
+        
         apiService.createEmployee(employee).enqueue(new Callback<EmployeeModel>() {
             @Override
             public void onResponse(Call<EmployeeModel> call, Response<EmployeeModel> response) {
                 if (response.isSuccessful()) {
+                    Log.d(TAG, "Employee created successfully");
                     AppCache.getInstance().clearCache(CACHE_KEY_EMPLOYEES);
                     loadEmployees();
+                    refreshAdminHomeStats(); // 통계 새로고침
                     Toast.makeText(getContext(), "직원이 추가되었습니다.", Toast.LENGTH_SHORT).show();
                 } else {
-                    Toast.makeText(getContext(), "직원 추가에 실패했습니다.", Toast.LENGTH_SHORT).show();
+                    Log.e(TAG, "Failed to create employee. Response code: " + response.code());
+                    Toast.makeText(getContext(), "직원 추가에 실패했습니다. (코드: " + response.code() + ")", Toast.LENGTH_SHORT).show();
                 }
             }
 
             @Override
             public void onFailure(Call<EmployeeModel> call, Throwable t) {
                 Log.e(TAG, "Error adding employee", t);
-                Toast.makeText(getContext(), "직원 추가 중 오류가 발생했습니다.", Toast.LENGTH_SHORT).show();
+                Toast.makeText(getContext(), "직원 추가 중 네트워크 오류가 발생했습니다: " + t.getMessage(), Toast.LENGTH_LONG).show();
             }
         });
     }
@@ -261,6 +299,7 @@ public class EmployeeManagementFragment extends Fragment {
                 if (response.isSuccessful()) {
                     AppCache.getInstance().clearCache(CACHE_KEY_EMPLOYEES);
                     loadEmployees();
+                    refreshAdminHomeStats(); // 통계 새로고침
                     Toast.makeText(getContext(), "직원 정보가 수정되었습니다.", Toast.LENGTH_SHORT).show();
                 } else {
                     Toast.makeText(getContext(), "직원 정보 수정에 실패했습니다.", Toast.LENGTH_SHORT).show();
@@ -291,6 +330,7 @@ public class EmployeeManagementFragment extends Fragment {
                 if (response.isSuccessful()) {
                     AppCache.getInstance().clearCache(CACHE_KEY_EMPLOYEES);
                     loadEmployees();
+                    refreshAdminHomeStats(); // 통계 새로고침
                     Toast.makeText(getContext(), "직원이 삭제되었습니다.", Toast.LENGTH_SHORT).show();
                 } else {
                     Toast.makeText(getContext(), "직원 삭제에 실패했습니다.", Toast.LENGTH_SHORT).show();
@@ -303,5 +343,14 @@ public class EmployeeManagementFragment extends Fragment {
                 Toast.makeText(getContext(), "직원 삭제 중 오류가 발생했습니다.", Toast.LENGTH_SHORT).show();
             }
         });
+    }
+
+    /**
+     * AdminHomeScreen의 통계 새로고침
+     */
+    private void refreshAdminHomeStats() {
+        if (getActivity() instanceof AdminHomeScreen) {
+            ((AdminHomeScreen) getActivity()).refreshDashboardStats();
+        }
     }
 }

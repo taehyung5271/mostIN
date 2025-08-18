@@ -76,4 +76,10 @@ public interface ApiService {
 
     @PUT("/api/goods/{barcode}")
     Call<GoodsModel> updateGoods(@Path("barcode") String str, @Body GoodsModel goodsModel);
+
+    @GET("/api/employees/count")
+    Call<Long> getEmployeeCount();
+
+    @GET("/api/goods/count")
+    Call<Long> getGoodsCount();
 }

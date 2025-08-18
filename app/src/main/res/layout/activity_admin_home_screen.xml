@@ -24,12 +24,12 @@
             app:elevation="4dp"
             android:background="@drawable/admin_gradient_background">
 
-            <!-- Admin Header Section -->
+            <!-- Admin Header Section - 컴팩트 버전 -->
             <LinearLayout
                 android:layout_width="match_parent"
-                android:layout_height="120dp"
+                android:layout_height="80dp"
                 android:orientation="vertical"
-                android:padding="24dp"
+                android:padding="16dp"
                 android:gravity="center_vertical">
 
                 <!-- Admin Title and Info -->
@@ -40,11 +40,11 @@
                     android:gravity="center_vertical">
 
                     <ImageView
-                        android:layout_width="40dp"
-                        android:layout_height="40dp"
+                        android:layout_width="32dp"
+                        android:layout_height="32dp"
                         android:src="@drawable/ic_work_24"
                         app:tint="@android:color/white"
-                        android:layout_marginEnd="16dp"/>
+                        android:layout_marginEnd="12dp"/>
 
                     <LinearLayout
                         android:layout_width="0dp"
@@ -57,7 +57,7 @@
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
                             android:text="관리자 대시보드"
-                            android:textAppearance="@style/TextAppearance.Material3.HeadlineMedium"
+                            android:textAppearance="@style/TextAppearance.Material3.TitleLarge"
                             android:textColor="@android:color/white"
                             android:textStyle="bold"/>
 
@@ -65,13 +65,28 @@
                             android:id="@+id/admin_subtitle"
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:text="시스템 관리 및 운영"
-                            android:textAppearance="@style/TextAppearance.Material3.BodyMedium"
+                            android:text="시스템 관리"
+                            android:textAppearance="@style/TextAppearance.Material3.BodySmall"
                             android:textColor="@android:color/white"
                             android:alpha="0.8"
-                            android:layout_marginTop="4dp"/>
+                            android:layout_marginTop="2dp"/>
 
                     </LinearLayout>
+
+                    <!-- 로그아웃 버튼 - 컴팩트 -->
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/btn_logout"
+                        android:layout_width="40dp"
+                        android:layout_height="40dp"
+                        android:layout_marginStart="8dp"
+                        style="@style/Widget.Material3.Button.IconButton"
+                        app:icon="@drawable/ic_logout"
+                        app:iconSize="20dp"
+                        app:iconTint="@android:color/white"
+                        app:backgroundTint="@android:color/transparent"
+                        app:rippleColor="@android:color/white"
+                        android:contentDescription="로그아웃"
+                        android:alpha="0.8"/>
 
                 </LinearLayout>
 
@@ -334,11 +349,12 @@
 
                 </LinearLayout>
 
-                <!-- Fragment Container -->
+                <!-- Fragment Container - 동적 크기 계산으로 최적화 -->
                 <com.google.android.material.card.MaterialCardView
                     android:layout_width="match_parent"
-                    android:layout_height="match_parent"
+                    android:layout_height="700dp"
                     android:layout_margin="16dp"
+                    android:layout_marginBottom="16dp"
                     app:cardCornerRadius="20dp"
                     app:cardElevation="4dp"
                     app:cardBackgroundColor="@android:color/white"
@@ -349,7 +365,7 @@
                         android:id="@+id/fragment_container"
                         android:layout_width="match_parent"
                         android:layout_height="match_parent"
-                        android:layout_margin="16dp"/>
+                        android:layout_margin="4dp"/>
 
                 </com.google.android.material.card.MaterialCardView>
 
