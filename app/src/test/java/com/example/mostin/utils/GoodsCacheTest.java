@@ -16,6 +16,7 @@ public class GoodsCacheTest {
     @Before
     public void setUp() {
         goodsCache = GoodsCache.getInstance();
+        goodsCache.initializeForTest(); // 테스트용 초기화 (Android 컴포넌트 없이)
         goodsCache.clearCache(); // Clean state for each test
         
         testGoodsList = new ArrayList<>();

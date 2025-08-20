@@ -46,10 +46,25 @@ public class GoodsCache {
         }
     }
 
+    /**
+     * 테스트 전용 초기화 메소드 - Android 컴포넌트 없이 테스트 가능
+     */
+    public void initializeForTest() {
+        // 테스트용으로는 SharedPreferences 없이 메모리만 사용
+        prefs = null;
+        cachedGoods = null;
+        cacheTimestamp = 0;
+        cacheVersion = 0;
+    }
+
     public List<GoodsModel> getCachedGoods() {
         if (isCacheValid()) {
             // 복사 없이 직접 반환으로 성능 개선 (읽기 전용)
-            Log.d(TAG, "⚡ 메모리 캐시 즉시 반환 (" + cachedGoods.size() + "개)");
+            try {
+                Log.d(TAG, "⚡ 메모리 캐시 즉시 반환 (" + cachedGoods.size() + "개)");
+            } catch (Exception e) {
+                // Log 사용 불가 환경 (테스트)에서는 무시
+            }
             return cachedGoods; // 직접 반환으로 성능 향상
         }
         return null;
@@ -62,7 +77,15 @@ public class GoodsCache {
             this.cacheVersion++;
             
             saveCacheToDisk();
-            Log.d(TAG, "상품 캐시 업데이트 완료 (총 " + goods.size() + "개, 버전: " + cacheVersion + ")");
+            try {
+                Log.d(TAG, "상품 캐시 업데이트 완료 (총 " + goods.size() + "개, 버전: " + cacheVersion + ")");
+            } catch (Exception e) {
+                // Log 사용 불가 환경 (테스트)에서는 무시
+            }
+        } else {
+            this.cachedGoods = null;
+            this.cacheTimestamp = 0;
+            this.cacheVersion = 0;
         }
     }
 
@@ -75,7 +98,11 @@ public class GoodsCache {
         boolean isValid = (currentTime - cacheTimestamp) < CACHE_VALIDITY_DURATION;
         
         if (!isValid) {
-            Log.d(TAG, "캐시 만료됨 (생성시간: " + cacheTimestamp + ", 현재시간: " + currentTime + ")");
+            try {
+                Log.d(TAG, "캐시 만료됨 (생성시간: " + cacheTimestamp + ", 현재시간: " + currentTime + ")");
+            } catch (Exception e) {
+                // Log 사용 불가 환경 (테스트)에서는 무시
+            }
         }
         
         return isValid;
@@ -87,14 +114,24 @@ public class GoodsCache {
         cacheVersion = 0;
         
         if (prefs != null) {
-            prefs.edit()
-                .remove(KEY_CACHED_GOODS)
-                .remove(KEY_CACHE_TIMESTAMP)
-                .remove(KEY_CACHE_VERSION)
-                .apply();
+            try {
+                prefs.edit()
+                    .remove(KEY_CACHED_GOODS)
+                    .remove(KEY_CACHE_TIMESTAMP)
+                    .remove(KEY_CACHE_VERSION)
+                    .apply();
+            } catch (Exception e) {
+                // SharedPreferences 사용 불가 환경 (테스트)에서는 무시
+                System.err.println("SharedPreferences 클리어 실패 (테스트 환경에서는 정상): " + e.getMessage());
+            }
         }
         
-        Log.d(TAG, "상품 캐시 클리어 완료");
+        try {
+            Log.d(TAG, "상품 캐시 클리어 완료");
+        } catch (Exception e) {
+            // Log 사용 불가 환경 (테스트)에서는 무시
+            System.out.println("상품 캐시 클리어 완료");
+        }
     }
 
     public void addGoods(GoodsModel newGoods) {
@@ -102,7 +139,11 @@ public class GoodsCache {
             cachedGoods.add(newGoods);
             cacheVersion++;
             saveCacheToDisk();
-            Log.d(TAG, "캐시에 새 상품 추가: " + newGoods.getName());
+            try {
+                Log.d(TAG, "캐시에 새 상품 추가: " + newGoods.getName());
+            } catch (Exception e) {
+                // Log 사용 불가 환경 (테스트)에서는 무시
+            }
         }
     }
 
@@ -113,7 +154,11 @@ public class GoodsCache {
                     cachedGoods.set(i, updatedGoods);
                     cacheVersion++;
                     saveCacheToDisk();
-                    Log.d(TAG, "캐시에서 상품 업데이트: " + updatedGoods.getName());
+                    try {
+                        Log.d(TAG, "캐시에서 상품 업데이트: " + updatedGoods.getName());
+                    } catch (Exception e) {
+                        // Log 사용 불가 환경 (테스트)에서는 무시
+                    }
                     return;
                 }
             }
@@ -127,7 +172,11 @@ public class GoodsCache {
                     GoodsModel removed = cachedGoods.remove(i);
                     cacheVersion++;
                     saveCacheToDisk();
-                    Log.d(TAG, "캐시에서 상품 삭제: " + removed.getName());
+                    try {
+                        Log.d(TAG, "캐시에서 상품 삭제: " + removed.getName());
+                    } catch (Exception e) {
+                        // Log 사용 불가 환경 (테스트)에서는 무시
+                    }
                     return;
                 }
             }
@@ -162,9 +211,17 @@ public class GoodsCache {
                     .putInt(KEY_CACHE_VERSION, cacheVersion)
                     .apply();
                 
-                Log.d(TAG, "캐시를 디스크에 저장 완료");
+                try {
+                    Log.d(TAG, "캐시를 디스크에 저장 완료");
+                } catch (Exception e) {
+                    // Log 사용 불가 환경 (테스트)에서는 무시
+                }
             } catch (Exception e) {
-                Log.e(TAG, "캐시 저장 실패", e);
+                try {
+                    Log.e(TAG, "캐시 저장 실패 (테스트 환경에서는 정상)", e);
+                } catch (Exception logException) {
+                    // Log 사용 불가 환경 (테스트)에서는 무시
+                }
             }
         }
     }
@@ -179,10 +236,18 @@ public class GoodsCache {
                     cacheTimestamp = prefs.getLong(KEY_CACHE_TIMESTAMP, 0);
                     cacheVersion = prefs.getInt(KEY_CACHE_VERSION, 0);
                     
-                    Log.d(TAG, "디스크에서 캐시 로드 완료: " + getCacheInfo());
+                    try {
+                        Log.d(TAG, "디스크에서 캐시 로드 완료: " + getCacheInfo());
+                    } catch (Exception e) {
+                        // Log 사용 불가 환경 (테스트)에서는 무시
+                    }
                 }
             } catch (Exception e) {
-                Log.e(TAG, "캐시 로드 실패", e);
+                try {
+                    Log.e(TAG, "캐시 로드 실패", e);
+                } catch (Exception logException) {
+                    // Log 사용 불가 환경 (테스트)에서는 무시
+                }
                 clearCache();
             }
         }
