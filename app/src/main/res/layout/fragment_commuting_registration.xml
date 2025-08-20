@@ -54,22 +54,6 @@
                     android:alpha="0.8"
                     android:layout_marginTop="4dp"/>
 
-                <!-- Work Status -->
-                <com.google.android.material.chip.Chip
-                    android:id="@+id/chip_work_status"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="근무 중"
-                    android:layout_gravity="center_horizontal"
-                    android:layout_marginTop="12dp"
-                    app:chipBackgroundColor="@color/tertiary_container"
-                    app:chipStrokeColor="@color/tertiary"
-                    app:chipStrokeWidth="1dp"
-                    app:chipIcon="@drawable/ic_work_24"
-                    app:chipIconTint="@color/on_tertiary_container"
-                    android:textColor="@color/on_tertiary_container"
-                    android:fontFamily="@font/pretendard_semibold"
-                    style="@style/Widget.Material3.Chip.Assist"/>
 
             </LinearLayout>
         </com.google.android.material.card.MaterialCardView>

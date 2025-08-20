@@ -1,18 +1,21 @@
 package com.example.mostin.adapters;
 
 import android.view.LayoutInflater;
-import android.view.View;
 import android.view.ViewGroup;
-import android.widget.TextView;
 
 import androidx.annotation.NonNull;
 import androidx.recyclerview.widget.RecyclerView;
 
-import com.example.mostin.R;
+import com.example.mostin.databinding.ItemOrderHistoryBinding;
 import com.example.mostin.models.OrderHistoryModel;
 
+import java.text.SimpleDateFormat;
+import java.time.LocalDate;
+import java.time.format.DateTimeFormatter;
+import java.time.format.DateTimeParseException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Locale;
 
 public class OrderHistoryAdapter extends RecyclerView.Adapter<OrderHistoryAdapter.ViewHolder> {
     private List<OrderHistoryModel> orderHistory = new ArrayList<>();
@@ -35,31 +38,21 @@ public class OrderHistoryAdapter extends RecyclerView.Adapter<OrderHistoryAdapte
 
     public void clearData() {
         this.orderHistory.clear();
-        // Don't clear workPlaceName to maintain consistency
         notifyDataSetChanged();
     }
 
     @NonNull
     @Override
     public ViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
-        View view = LayoutInflater.from(parent.getContext())
-                .inflate(R.layout.item_order_history, parent, false);
-        return new ViewHolder(view);
+        ItemOrderHistoryBinding binding = ItemOrderHistoryBinding.inflate(
+                LayoutInflater.from(parent.getContext()), parent, false);
+        return new ViewHolder(binding);
     }
 
     @Override
     public void onBindViewHolder(@NonNull ViewHolder holder, int position) {
         OrderHistoryModel order = orderHistory.get(position);
-        String displayText = String.format("%s %s 발주리스트",
-                order.getOrderingDay(),
-                workPlaceName);
-        holder.orderText.setText(displayText);
-
-        holder.itemView.setOnClickListener(v -> {
-            if (listener != null) {
-                listener.onOrderClick(order);
-            }
-        });
+        holder.bind(order, workPlaceName, listener);
     }
 
     @Override
@@ -68,11 +61,42 @@ public class OrderHistoryAdapter extends RecyclerView.Adapter<OrderHistoryAdapte
     }
 
     static class ViewHolder extends RecyclerView.ViewHolder {
-        TextView orderText;
+        private final ItemOrderHistoryBinding binding;
 
-        ViewHolder(View view) {
-            super(view);
-            orderText = view.findViewById(R.id.orderText);
+        ViewHolder(ItemOrderHistoryBinding binding) {
+            super(binding.getRoot());
+            this.binding = binding;
+        }
+
+        void bind(OrderHistoryModel order, String workPlaceName, OnOrderClickListener listener) {
+            // Format date for better display
+            String formattedDate = formatDate(order.getOrderingDay());
+            binding.tvOrderDate.setText(formattedDate);
+            
+            // Set workplace name
+            binding.tvWorkplaceName.setText(workPlaceName);
+            
+            // Set summary info
+            binding.tvTotalItems.setText(String.valueOf(order.getTotalItems()));
+            binding.tvTotalBoxes.setText(String.valueOf(order.getTotalBoxes()));
+            
+            
+            // Set click listener
+            binding.getRoot().setOnClickListener(v -> {
+                if (listener != null) {
+                    listener.onOrderClick(order);
+                }
+            });
+        }
+
+        private String formatDate(String dateString) {
+            try {
+                LocalDate date = LocalDate.parse(dateString);
+                DateTimeFormatter formatter = DateTimeFormatter.ofPattern("M월 d일", Locale.KOREAN);
+                return date.format(formatter);
+            } catch (DateTimeParseException e) {
+                return dateString; // Return original if parsing fails
+            }
         }
     }
 }

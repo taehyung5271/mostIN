@@ -12,6 +12,7 @@ import androidx.annotation.NonNull;
 import androidx.fragment.app.Fragment;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
+import androidx.swiperefreshlayout.widget.SwipeRefreshLayout;
 
 import com.example.mostin.R;
 import com.example.mostin.adapters.OrderHistoryAdapter;
@@ -35,6 +36,7 @@ import retrofit2.Response;
 
 public class UserOrderHistoryFragment extends Fragment {
     private RecyclerView recyclerView;
+    private SwipeRefreshLayout swipeRefreshLayout;
     private OrderHistoryAdapter adapter;
     
     private String employeeId;
@@ -46,7 +48,7 @@ public class UserOrderHistoryFragment extends Fragment {
         View view = inflater.inflate(R.layout.fragment_user_order_history, container, false);
         
         recyclerView = view.findViewById(R.id.recyclerView);
-        
+        swipeRefreshLayout = view.findViewById(R.id.swipeRefreshLayout);
 
         // Bundle에서 사용자 정보 가져오기
         Bundle args = getArguments();
@@ -61,10 +63,28 @@ public class UserOrderHistoryFragment extends Fragment {
         adapter = new OrderHistoryAdapter(this::showOrderDetailDialog);
         recyclerView.setAdapter(adapter);
 
+        // SwipeRefreshLayout 설정
+        setupSwipeRefresh();
+
         // 발주 내역 로드
         loadOrderHistory();
         
         return view;
+    }
+
+    private void setupSwipeRefresh() {
+        // 더 자연스러운 색상으로 변경 (회색 톤)
+        swipeRefreshLayout.setColorSchemeResources(
+                android.R.color.darker_gray,
+                android.R.color.black
+        );
+        
+        // 배경색을 투명하게 설정
+        swipeRefreshLayout.setProgressBackgroundColorSchemeResource(android.R.color.white);
+        
+        swipeRefreshLayout.setOnRefreshListener(() -> {
+            loadOrderHistory();
+        });
     }
 
     private void loadOrderHistory() {
@@ -97,7 +117,20 @@ public class UserOrderHistoryFragment extends Fragment {
                     sortedDates.sort((d1, d2) -> LocalDate.parse(d2).compareTo(LocalDate.parse(d1))); // Sort dates in descending order
 
                     for (String date : sortedDates) {
-                        orderHistory.add(new OrderHistoryModel(date, employeeId, employeeName, workPlaceName));
+                        List<Ordering> dayOrders = groupedOrders.get(date);
+                        int totalItems = dayOrders.size();
+                        int totalBoxes = dayOrders.stream()
+                                .mapToInt(Ordering::getBoxNum)
+                                .sum();
+                        
+                        orderHistory.add(new OrderHistoryModel(
+                                date, 
+                                employeeId, 
+                                employeeName, 
+                                workPlaceName,
+                                totalItems,
+                                totalBoxes
+                        ));
                     }
 
                     Log.d("UserOrderHistory", "Orders loaded: " + orderHistory.size());
@@ -106,12 +139,22 @@ public class UserOrderHistoryFragment extends Fragment {
                     Log.e("UserOrderHistory", "Failed to load orders: " + response.code());
                     Toast.makeText(getContext(), "발주 내역을 불러오는 데 실패했습니다.", Toast.LENGTH_SHORT).show();
                 }
+                
+                // Stop refresh animation
+                if (swipeRefreshLayout != null) {
+                    swipeRefreshLayout.setRefreshing(false);
+                }
             }
 
             @Override
             public void onFailure(Call<List<Ordering>> call, Throwable t) {
                 Log.e("UserOrderHistory", "Error loading orders", t);
                 Toast.makeText(getContext(), "발주 내역 로딩 중 오류가 발생했습니다.", Toast.LENGTH_SHORT).show();
+                
+                // Stop refresh animation
+                if (swipeRefreshLayout != null) {
+                    swipeRefreshLayout.setRefreshing(false);
+                }
             }
         });
     }

@@ -6,6 +6,7 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.widget.TextView;
 import android.widget.Toast;
+import android.app.Dialog;
 
 import androidx.annotation.NonNull;
 import androidx.core.content.ContextCompat;
@@ -13,10 +14,13 @@ import androidx.recyclerview.widget.RecyclerView;
 
 import com.example.mostin.R;
 import com.example.mostin.models.DateModel;
+import com.google.android.material.button.MaterialButton;
+import com.google.android.material.card.MaterialCardView;
 
 import java.time.DayOfWeek;
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Calendar;
 
 public class CalendarAdapter extends RecyclerView.Adapter<CalendarAdapter.CalendarViewHolder> {
 
@@ -71,11 +75,7 @@ public class CalendarAdapter extends RecyclerView.Adapter<CalendarAdapter.Calend
         // 클릭 이벤트
         holder.itemView.setOnClickListener(v -> {
             if (date.isCurrentMonth()) {
-                new androidx.appcompat.app.AlertDialog.Builder(v.getContext())
-                    .setTitle(date.getDay() + "일 출근 정보")
-                    .setMessage(getAttendanceInfo(date))
-                    .setPositiveButton("확인", null)
-                    .show();
+                showAttendanceDialog(v, date);
             }
         });
     }
@@ -95,6 +95,62 @@ public class CalendarAdapter extends RecyclerView.Adapter<CalendarAdapter.Calend
         }
 
         return info.toString();
+    }
+
+    private void showAttendanceDialog(View view, DateModel date) {
+        Dialog dialog = new Dialog(view.getContext());
+        dialog.setContentView(R.layout.dialog_attendance_detail);
+        dialog.getWindow().setBackgroundDrawableResource(android.R.color.transparent);
+        
+        // 다이얼로그 뷰 요소 참조
+        TextView textDialogDate = dialog.findViewById(R.id.text_dialog_date);
+        TextView textClockInTime = dialog.findViewById(R.id.text_clock_in_time);
+        TextView textClockOutTime = dialog.findViewById(R.id.text_clock_out_time);
+        MaterialCardView cardClockIn = dialog.findViewById(R.id.card_clock_in);
+        MaterialCardView cardClockOut = dialog.findViewById(R.id.card_clock_out);
+        MaterialCardView cardNoAttendance = dialog.findViewById(R.id.card_no_attendance);
+        MaterialButton btnConfirm = dialog.findViewById(R.id.btn_dialog_confirm);
+        
+        // 현재 연도와 월 계산 (DateModel에서 가져오기)
+        Calendar calendar = Calendar.getInstance();
+        if (date.getDate() != null) {
+            // 날짜 문자열 파싱 (yyyy-MM-dd 형식 가정)
+            String[] dateParts = date.getDate().split("-");
+            if (dateParts.length == 3) {
+                int year = Integer.parseInt(dateParts[0]);
+                int month = Integer.parseInt(dateParts[1]);
+                int day = Integer.parseInt(dateParts[2]);
+                textDialogDate.setText(String.format("%d년 %d월 %d일", year, month, day));
+            }
+        }
+        
+        // 출근 정보 표시
+        boolean hasClockIn = date.getClockInTime() != null && !date.getClockInTime().isEmpty() && date.getClockInTime().length() >= 5;
+        boolean hasClockOut = date.getClockOutTime() != null && !date.getClockOutTime().isEmpty() && date.getClockOutTime().length() >= 5;
+        
+        if (hasClockIn) {
+            // 출근 정보가 있는 경우
+            cardNoAttendance.setVisibility(View.GONE);
+            cardClockIn.setVisibility(View.VISIBLE);
+            textClockInTime.setText(date.getClockInTime().substring(0, 5));
+            
+            if (hasClockOut) {
+                cardClockOut.setVisibility(View.VISIBLE);
+                textClockOutTime.setText(date.getClockOutTime().substring(0, 5));
+            } else {
+                cardClockOut.setVisibility(View.GONE);
+            }
+        } else {
+            // 출근 정보가 없는 경우
+            cardNoAttendance.setVisibility(View.VISIBLE);
+            cardClockIn.setVisibility(View.GONE);
+            cardClockOut.setVisibility(View.GONE);
+        }
+        
+        // 확인 버튼 클릭 리스너
+        btnConfirm.setOnClickListener(v -> dialog.dismiss());
+        
+        dialog.show();
     }
 
     @Override

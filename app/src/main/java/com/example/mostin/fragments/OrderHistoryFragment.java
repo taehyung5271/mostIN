@@ -17,6 +17,7 @@ import androidx.annotation.Nullable;
 import androidx.fragment.app.Fragment;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
+import androidx.swiperefreshlayout.widget.SwipeRefreshLayout;
 
 import com.example.mostin.R;
 import com.example.mostin.adapters.OrderDetailAdapter;
@@ -44,9 +45,11 @@ public class OrderHistoryFragment extends Fragment {
 
     private Spinner employeeSpinner;
     private RecyclerView recyclerView;
+    private SwipeRefreshLayout swipeRefreshLayout;
     private OrderHistoryAdapter adapter;
     private ApiService apiService;
     private List<EmployeeModel> employeeList = new ArrayList<>();
+    private EmployeeModel selectedEmployee;
 
     @Override
     public void onCreate(@Nullable Bundle savedInstanceState) {
@@ -65,9 +68,32 @@ public class OrderHistoryFragment extends Fragment {
     private void initializeViews(View view) {
         employeeSpinner = view.findViewById(R.id.spinner_employee);
         recyclerView = view.findViewById(R.id.orderHistoryRecyclerView);
+        swipeRefreshLayout = view.findViewById(R.id.swipeRefreshLayout);
+        
         recyclerView.setLayoutManager(new LinearLayoutManager(requireContext()));
         adapter = new OrderHistoryAdapter(this::showOrderDetailDialog);
         recyclerView.setAdapter(adapter);
+        
+        setupSwipeRefresh();
+    }
+
+    private void setupSwipeRefresh() {
+        // 더 자연스러운 색상으로 변경 (회색 톤)
+        swipeRefreshLayout.setColorSchemeResources(
+                android.R.color.darker_gray,
+                android.R.color.black
+        );
+        
+        // 배경색을 투명하게 설정
+        swipeRefreshLayout.setProgressBackgroundColorSchemeResource(android.R.color.white);
+        
+        swipeRefreshLayout.setOnRefreshListener(() -> {
+            if (selectedEmployee != null) {
+                loadOrderHistory(selectedEmployee);
+            } else {
+                swipeRefreshLayout.setRefreshing(false);
+            }
+        });
     }
 
     private void loadEmployees() {
@@ -113,7 +139,8 @@ public class OrderHistoryFragment extends Fragment {
             @Override
             public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
                 if (position >= 0 && position < employeeList.size()) {
-                    loadOrderHistory(employeeList.get(position));
+                    selectedEmployee = employeeList.get(position);
+                    loadOrderHistory(selectedEmployee);
                 }
             }
 
@@ -141,12 +168,22 @@ public class OrderHistoryFragment extends Fragment {
                 } else {
                     Toast.makeText(getContext(), "발주 내역을 불러오는 데 실패했습니다.", Toast.LENGTH_SHORT).show();
                 }
+                
+                // Stop refresh animation
+                if (swipeRefreshLayout != null) {
+                    swipeRefreshLayout.setRefreshing(false);
+                }
             }
 
             @Override
             public void onFailure(Call<List<Ordering>> call, Throwable t) {
                 Log.e(TAG, "Error loading order history", t);
                 Toast.makeText(getContext(), "발주 내역 로딩 중 오류가 발생했습니다.", Toast.LENGTH_SHORT).show();
+                
+                // Stop refresh animation
+                if (swipeRefreshLayout != null) {
+                    swipeRefreshLayout.setRefreshing(false);
+                }
             }
         });
     }
@@ -157,7 +194,22 @@ public class OrderHistoryFragment extends Fragment {
 
         List<OrderHistoryModel> orderHistory = groupedOrders.keySet().stream()
                 .sorted((d1, d2) -> LocalDate.parse(d2).compareTo(LocalDate.parse(d1)))
-                .map(date -> new OrderHistoryModel(date, employee.getEmployeeId(), employee.getEmployeeName(), employee.getWorkPlaceName()))
+                .map(date -> {
+                    List<Ordering> dayOrders = groupedOrders.get(date);
+                    int totalItems = dayOrders.size();
+                    int totalBoxes = dayOrders.stream()
+                            .mapToInt(Ordering::getBoxNum)
+                            .sum();
+                    
+                    return new OrderHistoryModel(
+                            date, 
+                            employee.getEmployeeId(), 
+                            employee.getEmployeeName(), 
+                            employee.getWorkPlaceName(),
+                            totalItems,
+                            totalBoxes
+                    );
+                })
                 .collect(Collectors.toList());
 
         adapter.setOrderHistory(orderHistory, employee.getWorkPlaceName());

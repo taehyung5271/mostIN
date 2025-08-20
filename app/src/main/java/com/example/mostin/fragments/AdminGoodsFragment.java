@@ -33,6 +33,8 @@ import android.content.res.ColorStateList;
 import com.google.android.material.textfield.TextInputEditText;
 import com.example.mostin.utils.KeyboardHeightDetector;
 import com.example.mostin.utils.KeyboardStateListener;
+import android.view.inputmethod.InputMethodManager;
+import android.content.Context;
 
 public class AdminGoodsFragment extends Fragment implements KeyboardStateListener {
     private static final String TAG = "AdminGoodsFragment";
@@ -635,6 +637,35 @@ public class AdminGoodsFragment extends Fragment implements KeyboardStateListene
                 currentTop, targetOffsetFromTop, Math.abs(currentTop - targetOffsetFromTop), needsScroll));
         
         return needsScroll;
+    }
+    
+    /**
+     * 포커스 우선 정책 - 포커스만 처리하고 스크롤하지 않음 (편집 안전 영역용)
+     */
+    private void executeFocusOnlyPolicy(TextInputEditText editText, int position) {
+        if (editText == null) {
+            Log.w(TAG, "executeFocusOnlyPolicy: EditText가 null");
+            return;
+        }
+        
+        Log.d(TAG, "🎯 포커스 우선 정책 실행 - 위치: " + position);
+        
+        // 1단계: 포커스 먼저 확정
+        editText.requestFocus();
+        
+        // 2단계: 키보드 강제 표시
+        InputMethodManager imm = (InputMethodManager) getActivity().getSystemService(Context.INPUT_METHOD_SERVICE);
+        if (imm != null) {
+            // 키보드 표시 강제 실행
+            imm.showSoftInput(editText, InputMethodManager.SHOW_IMPLICIT);
+            Log.d(TAG, "⌨️ 키보드 강제 표시 요청");
+        }
+        
+        // 3단계: 포커스 상태 저장 (필요시 나중에 미세 조정용)
+        lastFocusedEditText = editText;
+        lastFocusedPosition = position;
+        
+        Log.d(TAG, "✅ 포커스 우선 정책 완료 - 스크롤 없이 키보드만 표시");
     }
     
     /**

@@ -4,8 +4,11 @@ import android.content.Intent;
 import android.location.Location;
 import android.location.LocationManager;
 import android.os.Bundle;
+import android.os.Handler;
+import android.os.Looper;
 import android.util.Log;
 import android.view.LayoutInflater;
+import android.view.MotionEvent;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.Button;
@@ -13,6 +16,7 @@ import android.widget.TextView;
 import android.widget.Toast;
 
 import androidx.appcompat.app.AlertDialog;
+import androidx.core.widget.NestedScrollView;
 import androidx.fragment.app.Fragment;
 
 import com.example.mostin.R;
@@ -61,8 +65,13 @@ public class CommutingRegistrationFragment extends Fragment implements OnMapRead
     private Button btnClockInOut;
     private TextView tvRecentEntry;
     private TextView tvRecentDeparture;
+    private TextView tvWorkDuration;
     private TextView tvWorkPlace;
+    private TextView tvCurrentTime;
+    private TextView tvCurrentDate;
+    private TextView tvDistanceText;
     private MapView mapView;
+    private NestedScrollView scrollView;
 
     private ApiService apiService;
     private FusedLocationSource locationSource;
@@ -76,6 +85,10 @@ public class CommutingRegistrationFragment extends Fragment implements OnMapRead
     private long clockInTime = 0;
     private LatLng workplaceLocation; // 근무지 위치
     private boolean isWorkingStatusChecked = false; // 근무 상태 확인 완료 여부
+    
+    // 근무시간 실시간 업데이트를 위한 Handler (1분마다 업데이트)
+    private Handler workTimeUpdateHandler;
+    private Runnable workTimeUpdateRunnable;
 
     @Override
     public void onCreate(Bundle savedInstanceState) {
@@ -92,23 +105,49 @@ public class CommutingRegistrationFragment extends Fragment implements OnMapRead
         } else {
             Log.e(TAG, "onCreate: Arguments are null!");
         }
+        
+        // 근무시간 업데이트 Handler 초기화
+        initializeWorkTimeUpdateHandler();
     }
 
     @Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
         View view = inflater.inflate(R.layout.fragment_commuting_registration, container, false);
+        
+        // NestedScrollView 참조 저장 (레이아웃의 루트 뷰)
+        if (view instanceof NestedScrollView) {
+            scrollView = (NestedScrollView) view;
+        }
+        
         initializeViews(view, savedInstanceState);
-        setupListeners(); // 클릭 리스너 설정 호출 추가
+        setupListeners(view); // 클릭 리스너 설정 호출 추가
         loadInitialData();
         return view;
     }
 
-    private void setupListeners() {
+    private void setupListeners(View view) {
         if (btnClockInOut != null) {
             btnClockInOut.setOnClickListener(this::handleWorkButtonClick);
             Log.d(TAG, "setupListeners: Click listener set for btnClockInOut");
         } else {
             Log.e(TAG, "setupListeners: btnClockInOut is null, cannot set click listener");
+        }
+        
+        // 위치 새로고침 버튼 리스너 추가
+        Button btnRefreshLocation = view.findViewById(R.id.btn_refresh_location);
+        if (btnRefreshLocation != null) {
+            btnRefreshLocation.setOnClickListener(v -> {
+                if (getContext() != null) {
+                    Location lastLocation = locationSource.getLastLocation();
+                    if (lastLocation != null) {
+                        updateDistanceDisplay(lastLocation);
+                        tryToUpdateButton();
+                        Toast.makeText(getContext(), "위치가 새로고침되었습니다.", Toast.LENGTH_SHORT).show();
+                    } else {
+                        Toast.makeText(getContext(), "현재 위치를 가져올 수 없습니다.", Toast.LENGTH_SHORT).show();
+                    }
+                }
+            });
         }
     }
 
@@ -118,16 +157,28 @@ public class CommutingRegistrationFragment extends Fragment implements OnMapRead
             
             tvRecentEntry = view.findViewById(R.id.text_clock_in_time);
             tvRecentDeparture = view.findViewById(R.id.text_clock_out_time);
+            tvWorkDuration = view.findViewById(R.id.text_work_duration);
             tvWorkPlace = view.findViewById(R.id.commuting_work_place);
+            tvCurrentTime = view.findViewById(R.id.text_current_time);
+            tvCurrentDate = view.findViewById(R.id.text_current_date);
+            tvDistanceText = view.findViewById(R.id.distance_text);
             btnClockInOut = view.findViewById(R.id.btn_clock_in_out);
             mapView = view.findViewById(R.id.map_view);
 
             // Null 체크 추가
             if (tvRecentEntry == null) Log.e(TAG, "tvRecentEntry is null!");
             if (tvRecentDeparture == null) Log.e(TAG, "tvRecentDeparture is null!");
+            if (tvWorkDuration == null) Log.e(TAG, "tvWorkDuration is null!");
             if (tvWorkPlace == null) Log.e(TAG, "tvWorkPlace is null!");
+            if (tvCurrentTime == null) Log.e(TAG, "tvCurrentTime is null!");
+            if (tvCurrentDate == null) Log.e(TAG, "tvCurrentDate is null!");
+            if (tvDistanceText == null) Log.e(TAG, "tvDistanceText is null!");
             if (btnClockInOut == null) Log.e(TAG, "btnClockInOut is null!");
             if (mapView == null) Log.e(TAG, "mapView is null!");
+            if (scrollView == null) Log.e(TAG, "scrollView is null!");
+
+            // 현재 시간과 날짜 설정
+            updateCurrentDateTime();
 
             if (btnClockInOut != null) {
                 btnClockInOut.setEnabled(false);
@@ -135,7 +186,12 @@ public class CommutingRegistrationFragment extends Fragment implements OnMapRead
             }
 
             Log.d(TAG, "initializeViews: Initializing NaverMap SDK");
-            NaverMapSdk.getInstance(requireContext()).setClient(new NaverMapSdk.NaverCloudPlatformClient("s7yxuuh84o"));
+            if (getContext() != null) {
+                NaverMapSdk.getInstance(getContext()).setClient(new NaverMapSdk.NaverCloudPlatformClient("s7yxuuh84o"));
+            } else {
+                Log.e(TAG, "initializeViews: Context is null, cannot initialize NaverMap SDK");
+                return;
+            }
             
             if (mapView != null) {
                 mapView.onCreate(savedInstanceState);
@@ -147,16 +203,40 @@ public class CommutingRegistrationFragment extends Fragment implements OnMapRead
             
         } catch (Exception e) {
             Log.e(TAG, "initializeViews: Exception occurred", e);
-            Toast.makeText(requireContext(), "지도 초기화 오류: " + e.getMessage(), Toast.LENGTH_LONG).show();
+            if (getContext() != null) {
+                Toast.makeText(getContext(), "지도 초기화 오류: " + e.getMessage(), Toast.LENGTH_LONG).show();
+            }
+        }
+    }
+
+    private void updateCurrentDateTime() {
+        if (tvCurrentTime != null && tvCurrentDate != null) {
+            // Asia/Seoul 시간대로 현재 시간 가져오기
+            Calendar calendar = Calendar.getInstance(java.util.TimeZone.getTimeZone("Asia/Seoul"));
+            
+            // 시간 포맷 (HH:mm)
+            SimpleDateFormat timeFormat = new SimpleDateFormat("HH:mm", Locale.KOREA);
+            timeFormat.setTimeZone(java.util.TimeZone.getTimeZone("Asia/Seoul"));
+            String currentTime = timeFormat.format(calendar.getTime());
+            
+            // 날짜 포맷 (yyyy년 M월 d일 E요일)
+            SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy년 M월 d일 E요일", Locale.KOREA);
+            dateFormat.setTimeZone(java.util.TimeZone.getTimeZone("Asia/Seoul"));
+            String currentDate = dateFormat.format(calendar.getTime());
+            
+            tvCurrentTime.setText(currentTime);
+            tvCurrentDate.setText(currentDate);
+            
+            Log.d(TAG, "updateCurrentDateTime: Time=" + currentTime + ", Date=" + currentDate);
         }
     }
 
     private void loadInitialData() {
-        if (workPlaceName != null) {
+        if (workPlaceName != null && tvWorkPlace != null) {
             tvWorkPlace.setText(workPlaceName);
             updateRecentAttendance();
         } else {
-            Log.e(TAG, "loadInitialData: workPlaceName is null.");
+            Log.e(TAG, "loadInitialData: workPlaceName or tvWorkPlace is null. workPlaceName=" + workPlaceName + ", tvWorkPlace=" + tvWorkPlace);
         }
     }
 
@@ -170,7 +250,31 @@ public class CommutingRegistrationFragment extends Fragment implements OnMapRead
 
         naverMap.addOnLocationChangeListener(location -> {
             Log.d(TAG, "onLocationChange: New location -> " + location.getLatitude() + ", " + location.getLongitude());
+            updateDistanceDisplay(location);
             tryToUpdateButton();
+        });
+
+        // 네이버 지도와 스크롤뷰 간의 터치 이벤트 충돌 해결
+        naverMap.setOnMapTouchListener(new NaverMap.OnMapTouchListener() {
+            @Override
+            public void onTouch(com.naver.maps.map.MapView naverMapView, MotionEvent motionEvent) {
+                switch (motionEvent.getAction()) {
+                    case MotionEvent.ACTION_DOWN:
+                    case MotionEvent.ACTION_MOVE:
+                        // 지도 터치 시 부모 스크롤 막기
+                        if (scrollView != null) {
+                            scrollView.requestDisallowInterceptTouchEvent(true);
+                        }
+                        break;
+                    case MotionEvent.ACTION_UP:
+                    case MotionEvent.ACTION_CANCEL:
+                        // 지도 터치 종료 시 부모 스크롤 허용
+                        if (scrollView != null) {
+                            scrollView.requestDisallowInterceptTouchEvent(false);
+                        }
+                        break;
+                }
+            }
         });
 
         // Load data after map is ready
@@ -196,6 +300,9 @@ public class CommutingRegistrationFragment extends Fragment implements OnMapRead
                             try {
                                 Date clockIn = DATE_FORMAT.parse(recentCommute.getCommuteDay() + " " + recentCommute.getStartTime());
                                 clockInTime = Objects.requireNonNull(clockIn).getTime();
+                                
+                                // 이미 근무 중이면 근무시간 실시간 업데이트 시작 (1분마다)
+                                startWorkTimeUpdate();
                             } catch (ParseException | NullPointerException e) {
                                 isWorking = false;
                             }
@@ -237,9 +344,17 @@ public class CommutingRegistrationFragment extends Fragment implements OnMapRead
                     workplaceLocation = new LatLng(workplace.getLatitude(), workplace.getLongitude());
                     Log.d(TAG, "loadWorkplaceLocation: Location found: " + workplaceLocation);
                     setupMapMarker(workplaceLocation);
+                    
+                    // 근무지 위치가 로드된 후 현재 위치와의 거리 업데이트
+                    Location lastLocation = locationSource.getLastLocation();
+                    if (lastLocation != null) {
+                        updateDistanceDisplay(lastLocation);
+                    }
                 } else {
                     Log.e(TAG, "loadWorkplaceLocation: Could not find location.");
-                    Toast.makeText(getContext(), "근무지 위치를 찾을 수 없습니다.", Toast.LENGTH_SHORT).show();
+                    if (getContext() != null) {
+                        Toast.makeText(getContext(), "근무지 위치를 찾을 수 없습니다.", Toast.LENGTH_SHORT).show();
+                    }
                 }
                 tryToUpdateButton();
             }
@@ -247,7 +362,9 @@ public class CommutingRegistrationFragment extends Fragment implements OnMapRead
             @Override
             public void onFailure(Call<WorkPlace> call, Throwable t) {
                 Log.e(TAG, "loadWorkplaceLocation: onFailure", t);
-                Toast.makeText(getContext(), "근무지 위치 로딩 중 오류 발생", Toast.LENGTH_SHORT).show();
+                if (getContext() != null) {
+                    Toast.makeText(getContext(), "근무지 위치 로딩 중 오류 발생", Toast.LENGTH_SHORT).show();
+                }
                 tryToUpdateButton();
             }
         });
@@ -278,6 +395,12 @@ public class CommutingRegistrationFragment extends Fragment implements OnMapRead
                 } else {
                     btnClockInOut.setText("출근중");
                 }
+                
+                // Update work duration in real-time while working
+                if (tvWorkDuration != null) {
+                    String formattedDuration = formatWorkDuration(workedTime);
+                    tvWorkDuration.setText(formattedDuration);
+                }
             }
             else {
                 if (lastLocation != null) {
@@ -297,6 +420,25 @@ public class CommutingRegistrationFragment extends Fragment implements OnMapRead
                 }
             }
         });
+    }
+
+    private void updateDistanceDisplay(Location currentLocation) {
+        if (currentLocation != null && workplaceLocation != null && tvDistanceText != null) {
+            LatLng currentLatLng = new LatLng(currentLocation.getLatitude(), currentLocation.getLongitude());
+            float distance = calculateDistance(currentLatLng, workplaceLocation);
+            
+            String distanceText;
+            if (distance < 1000) {
+                // 1km 미만이면 미터 단위로 표시
+                distanceText = String.format(Locale.KOREA, "현재 위치에서 %.0fm", distance);
+            } else {
+                // 1km 이상이면 킬로미터 단위로 표시
+                distanceText = String.format(Locale.KOREA, "현재 위치에서 %.1fkm", distance / 1000);
+            }
+            
+            tvDistanceText.setText(distanceText);
+            Log.d(TAG, "updateDistanceDisplay: " + distanceText);
+        }
     }
 
     private float calculateDistance(LatLng p1, LatLng p2) {
@@ -374,6 +516,10 @@ public class CommutingRegistrationFragment extends Fragment implements OnMapRead
                     } catch (ParseException e) {
                         clockInTime = System.currentTimeMillis(); // Fallback
                     }
+                    
+                    // 출근 후 근무시간 실시간 업데이트 시작 (1분마다)
+                    startWorkTimeUpdate();
+                    
                     updateButtonStatus();
                     updateRecentAttendance(); // Refresh the display
                 } else {
@@ -406,6 +552,10 @@ public class CommutingRegistrationFragment extends Fragment implements OnMapRead
             public void onResponse(Call<CommuteModel> call, Response<CommuteModel> response) {
                 if (response.isSuccessful()) {
                     isWorking = false;
+                    
+                    // 퇴근 후 근무시간 실시간 업데이트 중지
+                    stopWorkTimeUpdate();
+                    
                     updateButtonStatus();
                     updateRecentAttendance();
                     Toast.makeText(getContext(), "퇴근이 등록되었습니다.", Toast.LENGTH_SHORT).show();
@@ -452,32 +602,95 @@ public class CommutingRegistrationFragment extends Fragment implements OnMapRead
                     String startTime = recentCommute.getStartTime();
                     String endTime = recentCommute.getEndTime();
 
+                    // Update clock in time
                     if (startTime == null || startTime.isEmpty()) {
-                        tvRecentEntry.setText("출근 기록 없음");
+                        tvRecentEntry.setText("-");
                     } else {
-                        // Format to "yyyy-MM-dd HH:mm"
-                        String displayTime = recentCommute.getCommuteDay() + " " + startTime.substring(0, 5);
-                        tvRecentEntry.setText("출근 시간: " + displayTime);
+                        // Format to "HH:mm" only
+                        String displayTime = startTime.substring(0, 5);
+                        tvRecentEntry.setText(displayTime);
                     }
 
+                    // Update clock out time
                     if (endTime == null || endTime.isEmpty()) {
-                        tvRecentDeparture.setText("퇴근 기록 없음");
+                        tvRecentDeparture.setText("-");
                     } else {
-                        // Format to "yyyy-MM-dd HH:mm"
-                        String displayTime = recentCommute.getCommuteDay() + " " + endTime.substring(0, 5);
-                        tvRecentDeparture.setText("퇴근 시간: " + displayTime);
+                        // Format to "HH:mm" only
+                        String displayTime = endTime.substring(0, 5);
+                        tvRecentDeparture.setText(displayTime);
                     }
+
+                    // Calculate and update work duration
+                    updateWorkDuration(startTime, endTime);
                 } else {
-                    tvRecentEntry.setText("출근 기록 없음");
-                    tvRecentDeparture.setText("퇴근 기록 없음");
+                    tvRecentEntry.setText("-");
+                    tvRecentDeparture.setText("-");
+                    tvWorkDuration.setText("-");
                 }
             }
 
             @Override
             public void onFailure(Call<CommuteModel> call, Throwable t) {
                 Log.e(TAG, "Error fetching recent commute.", t);
+                tvRecentEntry.setText("-");
+                tvRecentDeparture.setText("-");
+                tvWorkDuration.setText("-");
             }
         });
+    }
+
+    private void updateWorkDuration(String startTime, String endTime) {
+        if (tvWorkDuration == null) {
+            return;
+        }
+
+        if (startTime == null || startTime.isEmpty()) {
+            tvWorkDuration.setText("-");
+            return;
+        }
+
+        if (endTime == null || endTime.isEmpty()) {
+            // If still working, calculate current work duration
+            if (isWorking) {
+                long currentTime = System.currentTimeMillis();
+                long workDuration = currentTime - clockInTime;
+                String formattedDuration = formatWorkDuration(workDuration);
+                tvWorkDuration.setText(formattedDuration);
+            } else {
+                tvWorkDuration.setText("-");
+            }
+        } else {
+            // Calculate total work duration
+            try {
+                SimpleDateFormat timeFormat = new SimpleDateFormat("HH:mm:ss", Locale.KOREA);
+                timeFormat.setTimeZone(java.util.TimeZone.getTimeZone("Asia/Seoul"));
+                
+                Date startDate = timeFormat.parse(startTime);
+                Date endDate = timeFormat.parse(endTime);
+                
+                if (startDate != null && endDate != null) {
+                    long workDuration = endDate.getTime() - startDate.getTime();
+                    String formattedDuration = formatWorkDuration(workDuration);
+                    tvWorkDuration.setText(formattedDuration);
+                } else {
+                    tvWorkDuration.setText("-");
+                }
+            } catch (ParseException e) {
+                Log.e(TAG, "Error parsing work duration times", e);
+                tvWorkDuration.setText("-");
+            }
+        }
+    }
+
+    private String formatWorkDuration(long durationMs) {
+        if (durationMs <= 0) {
+            return "0h 0m";
+        }
+        
+        long hours = durationMs / 3600000; // Convert to hours
+        long minutes = (durationMs % 3600000) / 60000; // Remaining minutes
+        
+        return String.format(Locale.KOREA, "%dh %dm", hours, minutes);
     }
 
     private void checkLocationPermission() {
@@ -528,6 +741,52 @@ public class CommutingRegistrationFragment extends Fragment implements OnMapRead
     public void onResume() {
         super.onResume();
         mapView.onResume();
+        // 프래그먼트가 화면에 보일 때마다 현재 시간 업데이트
+        updateCurrentDateTime();
+    }
+    
+    /**
+     * 근무시간 실시간 업데이트를 위한 Handler 초기화
+     * 1분마다 근무시간을 업데이트합니다.
+     */
+    private void initializeWorkTimeUpdateHandler() {
+        workTimeUpdateHandler = new Handler(Looper.getMainLooper());
+        workTimeUpdateRunnable = new Runnable() {
+            @Override
+            public void run() {
+                if (isWorking && tvWorkDuration != null) {
+                    // 현재 근무시간 계산 및 업데이트
+                    long workedTime = System.currentTimeMillis() - clockInTime;
+                    String formattedDuration = formatWorkDuration(workedTime);
+                    tvWorkDuration.setText(formattedDuration);
+                    
+                    Log.d(TAG, "Work time updated: " + formattedDuration);
+                }
+                
+                // 1분 후 다시 실행 (60000ms = 1분)
+                workTimeUpdateHandler.postDelayed(this, 60000);
+            }
+        };
+    }
+    
+    /**
+     * 근무시간 실시간 업데이트 시작
+     */
+    private void startWorkTimeUpdate() {
+        if (workTimeUpdateHandler != null && workTimeUpdateRunnable != null) {
+            Log.d(TAG, "Starting work time update (1 minute interval)");
+            workTimeUpdateHandler.post(workTimeUpdateRunnable);
+        }
+    }
+    
+    /**
+     * 근무시간 실시간 업데이트 중지
+     */
+    private void stopWorkTimeUpdate() {
+        if (workTimeUpdateHandler != null && workTimeUpdateRunnable != null) {
+            Log.d(TAG, "Stopping work time update");
+            workTimeUpdateHandler.removeCallbacks(workTimeUpdateRunnable);
+        }
     }
 
     @Override
@@ -545,6 +804,14 @@ public class CommutingRegistrationFragment extends Fragment implements OnMapRead
     @Override
     public void onDestroyView() {
         super.onDestroyView();
+        
+        // Fragment 파괴 시 근무시간 업데이트 Handler 정리
+        stopWorkTimeUpdate();
+        if (workTimeUpdateHandler != null) {
+            workTimeUpdateHandler.removeCallbacksAndMessages(null);
+            workTimeUpdateHandler = null;
+        }
+        
         mapView.onDestroy();
     }
 

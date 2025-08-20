@@ -8,7 +8,7 @@
     android:paddingLeft="16dp"
     android:paddingRight="16dp"
     android:paddingTop="0dp"
-    android:paddingBottom="16dp"
+    android:paddingBottom="46dp"
     android:clipToPadding="true"
     android:fillViewport="false">
 
@@ -22,6 +22,7 @@
             <com.google.android.material.card.MaterialCardView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
+                android:layout_marginTop="16dp"
                 app:cardCornerRadius="16dp"
                 app:cardElevation="2dp"
                 app:cardBackgroundColor="@color/surface_container_low">
@@ -154,30 +155,14 @@
                     android:orientation="vertical"
                     android:padding="20dp">
 
-                    <LinearLayout
-                        android:layout_width="match_parent"
+                    <TextView
+                        android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:orientation="horizontal"
-                        android:gravity="center_vertical"
-                        android:layout_marginBottom="16dp">
-
-                        <TextView
-                            android:layout_width="0dp"
-                            android:layout_height="wrap_content"
-                            android:layout_weight="1"
-                            android:text="발주 요약"
-                            android:textAppearance="@style/TextAppearance.Material3.TitleMedium"
-                            android:textColor="@color/on_surface"
-                            android:fontFamily="@font/pretendard_semibold"/>
-
-                        <com.google.android.material.chip.Chip
-                            android:id="@+id/chip_item_count"
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:text="0개 선택"
-                            style="@style/Widget.Material3.Chip.Assist"/>
-
-                    </LinearLayout>
+                        android:text="발주 요약"
+                        android:textAppearance="@style/TextAppearance.Material3.TitleMedium"
+                        android:textColor="@color/on_surface"
+                        android:fontFamily="@font/pretendard_semibold"
+                        android:layout_marginBottom="16dp"/>
 
                     <!-- Order Summary Text -->
                     <com.google.android.material.textfield.TextInputLayout

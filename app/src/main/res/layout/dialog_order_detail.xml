@@ -10,24 +10,27 @@
         android:layout_height="wrap_content"
         android:orientation="horizontal"
         android:layout_marginBottom="16dp">
-    <TextView
-        android:id="@+id/text_workplace"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="이마트왕십리점"
-        android:textSize="18sp"
-        android:textStyle="bold"
-        android:layout_marginBottom="8dp"/>
+        
+        <TextView
+            android:id="@+id/text_workplace"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="이마트왕십리점"
+            android:textSize="18sp"
+            android:textStyle="bold"
+            android:layout_marginBottom="8dp"/>
 
-    <TextView
-        android:id="@+id/text_date"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:textSize="16sp"
-        android:textAlignment="textEnd"
-        android:text="2024-05-14"
-        android:layout_marginBottom="16dp"/>
+        <TextView
+            android:id="@+id/text_date"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:textSize="16sp"
+            android:textAlignment="textEnd"
+            android:text="2024-05-14"
+            android:layout_marginBottom="16dp"/>
+            
     </LinearLayout>
+    
     <TableLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
@@ -56,7 +59,6 @@
                 android:gravity="center"/>
         </TableRow>
     </TableLayout>
-
 
     <androidx.recyclerview.widget.RecyclerView
         android:id="@+id/recycler_order_detail"
