@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<merge xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="wrap_content"
+    android:layout_height="wrap_content">
+    <ImageView
+        android:id="@+id/navermap_location_icon"
+        android:layout_width="52dp"
+        android:layout_height="52dp"
+        android:src="0x7f080130"
+        android:contentDescription="@string/navermap_current_location"/>
+    <View
+        android:id="@+id/navermap_location_icon_progress_overlay"
+        android:layout_width="36dp"
+        android:layout_height="36dp"
+        android:layout_marginTop="7dp"
+        android:tint="@color/navermap_primary"
+        android:layout_marginStart="8dp"/>
+</merge>

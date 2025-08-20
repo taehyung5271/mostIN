@@ -1,7 +1,11 @@
 package com.example.mostin.models;
 
+import com.google.gson.annotations.SerializedName;
+
 public class GoodsModel {
+    @SerializedName("barcode")
     private String barcode;
+    @SerializedName("goodsName")
     private String name;
 
     public GoodsModel(String barcode, String name) {

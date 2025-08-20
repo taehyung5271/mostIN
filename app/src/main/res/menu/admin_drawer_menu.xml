@@ -14,4 +14,16 @@
             android:icon="@drawable/ic_goods_manage"
             android:title="상품 관리" />
     </group>
+    
+    <!-- 시스템 기능들 -->
+    <group android:checkableBehavior="none">
+        <item
+            android:id="@+id/action_admin_settings"
+            android:icon="@drawable/ic_settings"
+            android:title="설정" />
+        <item
+            android:id="@+id/action_admin_logout"
+            android:icon="@drawable/ic_logout"
+            android:title="로그아웃" />
+    </group>
 </menu> 

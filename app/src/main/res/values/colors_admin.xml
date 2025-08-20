@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Admin Theme Colors - Deep Purple & Indigo -->
+    <color name="admin_primary">#6B46C1</color>
+    <color name="admin_primary_dark">#553C9A</color>
+    <color name="admin_primary_variant">#8B5CF6</color>
+    <color name="admin_secondary">#4F46E5</color>
+    <color name="admin_secondary_variant">#6366F1</color>
+    <color name="admin_accent">#F59E0B</color>
+    <color name="admin_accent_variant">#FBBF24</color>
+    
+    <!-- Admin Background Colors -->
+    <color name="admin_surface">#FAFAFA</color>
+    <color name="admin_surface_variant">#F3F4F6</color>
+    <color name="admin_surface_container">#FFFFFF</color>
+    <color name="admin_surface_container_high">#F9FAFB</color>
+    
+    <!-- Admin Text Colors -->
+    <color name="admin_on_primary">#FFFFFF</color>
+    <color name="admin_on_secondary">#FFFFFF</color>
+    <color name="admin_on_surface">#1F2937</color>
+    <color name="admin_on_surface_variant">#4B5563</color>
+    
+    <!-- Admin Status Colors -->
+    <color name="admin_success">#10B981</color>
+    <color name="admin_warning">#F59E0B</color>
+    <color name="admin_error">#EF4444</color>
+    <color name="admin_info">#3B82F6</color>
+    
+    <!-- Admin Card Colors -->
+    <color name="admin_card_background">#FFFFFF</color>
+    <color name="admin_card_elevated">#F8FAFC</color>
+    <color name="admin_outline">#E5E7EB</color>
+    <color name="admin_outline_variant">#F3F4F6</color>
+</resources>

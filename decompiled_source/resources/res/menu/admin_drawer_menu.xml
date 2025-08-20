@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<menu xmlns:android="http://schemas.android.com/apk/res/android">
+    <group android:checkableBehavior="single">
+        <item
+            android:icon="@drawable/ic_profile"
+            android:id="@+id/action_manage_employee"
+            android:title="직원 관리"/>
+        <item
+            android:icon="@drawable/ic_goods_order"
+            android:id="@+id/action_order_history"
+            android:title="발주 내역"/>
+        <item
+            android:icon="@drawable/ic_goods_manage"
+            android:id="@+id/action_manage_goods"
+            android:title="상품 관리"/>
+    </group>
+</menu>

@@ -19,9 +19,8 @@ public class OrderDetailAdapter extends RecyclerView.Adapter<OrderDetailAdapter.
 
     
     public void setOrderDetails(List<OrderDetailModel> details) {
-        this.details = details != null ? details : new ArrayList<>();
+        this.details = details != null ? new ArrayList<>(details) : new ArrayList<>();
         notifyDataSetChanged();
-
     }
 
     @NonNull

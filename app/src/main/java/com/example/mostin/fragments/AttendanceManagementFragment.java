@@ -13,19 +13,27 @@ import com.example.mostin.R;
 import com.example.mostin.adapters.AttendanceRecordAdapter;
 import com.example.mostin.models.AttendanceRecordModel;
 import com.example.mostin.models.EmployeeModel;
-import com.example.mostin.utils.SQLiteHelper;
+import com.example.mostin.api.ApiClient;
+import com.example.mostin.api.ApiService;
+import com.example.mostin.models.CommuteModel;
 
 import androidx.fragment.app.Fragment;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
+import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.List;
 import java.util.Locale;
 
+import retrofit2.Call;
+import retrofit2.Callback;
+import retrofit2.Response;
+import android.util.Log;
+import android.widget.Toast;
+
 public class AttendanceManagementFragment extends Fragment {
     private RecyclerView recyclerView;
-    private SQLiteHelper dbHelper;
     private AttendanceRecordAdapter adapter;
     private Calendar currentCalendar;
     private Spinner spinnerEmployee;
@@ -37,7 +45,6 @@ public class AttendanceManagementFragment extends Fragment {
     public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
         View view = inflater.inflate(R.layout.fragment_attendance_management, container, false);
 
-        dbHelper = new SQLiteHelper(requireContext());
         currentCalendar = Calendar.getInstance();
 
         // 뷰 초기화
@@ -46,7 +53,7 @@ public class AttendanceManagementFragment extends Fragment {
         setupEmployeeSpinner();
         // 초기 데이터 로드
         updateMonthDisplay();
-        loadAttendanceData();
+        // loadAttendanceData() will be called after employee selection
 
         return view;
     }
@@ -66,24 +73,41 @@ public class AttendanceManagementFragment extends Fragment {
     }
 
     private void setupEmployeeSpinner() {
-        List<EmployeeModel> employees = dbHelper.getAllEmployees();
-        ArrayAdapter<EmployeeModel> spinnerAdapter = new ArrayAdapter<>(requireContext(),
-                android.R.layout.simple_spinner_item,
-                employees);
-        spinnerAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
-        spinnerEmployee.setAdapter(spinnerAdapter);
-
-        spinnerEmployee.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
+        ApiService apiService = ApiClient.getApiService();
+        apiService.getAllEmployees().enqueue(new Callback<List<EmployeeModel>>() {
             @Override
-            public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
-                EmployeeModel employee = (EmployeeModel) parent.getItemAtPosition(position);
-                selectedEmployeeId = employee.getEmployeeId();
-                loadAttendanceData();
+            public void onResponse(Call<List<EmployeeModel>> call, Response<List<EmployeeModel>> response) {
+                if (response.isSuccessful() && response.body() != null) {
+                    List<EmployeeModel> employees = response.body();
+                    ArrayAdapter<EmployeeModel> spinnerAdapter = new ArrayAdapter<>(requireContext(),
+                            android.R.layout.simple_spinner_item,
+                            employees);
+                    spinnerAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
+                    spinnerEmployee.setAdapter(spinnerAdapter);
+
+                    spinnerEmployee.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
+                        @Override
+                        public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
+                            EmployeeModel employee = (EmployeeModel) parent.getItemAtPosition(position);
+                            selectedEmployeeId = employee.getEmployeeId();
+                            loadAttendanceData();
+                        }
+
+                        @Override
+                        public void onNothingSelected(AdapterView<?> parent) {
+                            selectedEmployeeId = null;
+                        }
+                    });
+                } else {
+                    Toast.makeText(getContext(), "직원 목록을 불러오는데 실패했습니다.", Toast.LENGTH_SHORT).show();
+                    Log.e("AttendanceManagementFragment", "Failed to fetch employees: " + response.message());
+                }
             }
 
             @Override
-            public void onNothingSelected(AdapterView<?> parent) {
-                selectedEmployeeId = null;
+            public void onFailure(Call<List<EmployeeModel>> call, Throwable t) {
+                Toast.makeText(getContext(), "네트워크 오류: " + t.getMessage(), Toast.LENGTH_SHORT).show();
+                Log.e("AttendanceManagementFragment", "API call failed: " + t.getMessage(), t);
             }
         });
     }
@@ -105,14 +129,40 @@ public class AttendanceManagementFragment extends Fragment {
         if (selectedEmployeeId == null) return;
 
         int year = currentCalendar.get(Calendar.YEAR);
-        int month = currentCalendar.get(Calendar.MONTH) + 1;
+        int month = currentCalendar.get(Calendar.MONTH) + 1; // Month is 0-indexed in Calendar, 1-indexed in API
 
-        List<AttendanceRecordModel> records = dbHelper.getMonthlyAttendance(
-                selectedEmployeeId, year, month);
-        adapter.setRecords(records);
+        ApiService apiService = ApiClient.getApiService();
+        apiService.getMonthlyCommute(selectedEmployeeId, year, month).enqueue(new Callback<List<CommuteModel>>() {
+            @Override
+            public void onResponse(Call<List<CommuteModel>> call, Response<List<CommuteModel>> response) {
+                if (response.isSuccessful() && response.body() != null) {
+                    List<CommuteModel> commuteModels = response.body();
+                    List<AttendanceRecordModel> records = new ArrayList<>();
+                    for (CommuteModel commute : commuteModels) {
+                        // Map CommuteModel to AttendanceRecordModel
+                        records.add(new AttendanceRecordModel(
+                                commute.getCommuteDay(),
+                                commute.getEmployeeId(),
+                                commute.getEmployeeName(),
+                                commute.getStartTime(),
+                                commute.getEndTime(),
+                                commute.getWorkPlaceName()
+                        ));
+                    }
+                    adapter.setRecords(records);
+                    updateAttendanceSummary(records);
+                } else {
+                    Toast.makeText(getContext(), "근태 기록을 불러오는데 실패했습니다.", Toast.LENGTH_SHORT).show();
+                    Log.e("AttendanceManagementFragment", "Failed to fetch attendance: " + response.message());
+                }
+            }
 
-        // 근태 통계 업데이트
-        updateAttendanceSummary(records);
+            @Override
+            public void onFailure(Call<List<CommuteModel>> call, Throwable t) {
+                Toast.makeText(getContext(), "네트워크 오류: " + t.getMessage(), Toast.LENGTH_SHORT).show();
+                Log.e("AttendanceManagementFragment", "API call failed: " + t.getMessage(), t);
+            }
+        });
     }
 
     private void updateAttendanceSummary(List<AttendanceRecordModel> records) {

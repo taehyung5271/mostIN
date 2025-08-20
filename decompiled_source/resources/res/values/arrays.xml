@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <array name="employee_types">
+        <item>MD</item>
+        <item>SV</item>
+    </array>
+    <array name="navermap_info_menu">
+        <item>@string/navermap_legend</item>
+        <item>@string/navermap_legal_notice</item>
+        <item>@string/navermap_open_source_license</item>
+    </array>
+</resources>
