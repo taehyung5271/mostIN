@@ -254,11 +254,10 @@ public class CommutingRegistrationFragment extends Fragment implements OnMapRead
             tryToUpdateButton();
         });
 
-        // 네이버 지도와 스크롤뷰 간의 터치 이벤트 충돌 해결
-        naverMap.setOnMapTouchListener(new NaverMap.OnMapTouchListener() {
-            @Override
-            public void onTouch(com.naver.maps.map.MapView naverMapView, MotionEvent motionEvent) {
-                switch (motionEvent.getAction()) {
+        // 지도뷰에 터치 리스너 설정하여 스크롤 충돌 해결
+        if (mapView != null) {
+            mapView.setOnTouchListener((v, event) -> {
+                switch (event.getAction()) {
                     case MotionEvent.ACTION_DOWN:
                     case MotionEvent.ACTION_MOVE:
                         // 지도 터치 시 부모 스크롤 막기
@@ -274,8 +273,9 @@ public class CommutingRegistrationFragment extends Fragment implements OnMapRead
                         }
                         break;
                 }
-            }
-        });
+                return false; // 이벤트를 다른 리스너로 전달
+            });
+        }
 
         // Load data after map is ready
         loadWorkplaceLocation();
