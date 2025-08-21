@@ -237,7 +237,12 @@ public class HomeScreen extends AppCompatActivity implements NavigationView.OnNa
                 collapsingTitle.setText("발주 신청");
             }
         } else if (itemId == R.id.action_logout) {
+            // 세션 정리 후 로그아웃
+            sessionManager.logout();
+            Log.d("HomeScreen", "User logged out via toolbar, session cleared");
+            
             Intent intent = new Intent(this, LoginActivity.class);
+            intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
             startActivity(intent);
             finish();
             return true;

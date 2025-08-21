@@ -35,6 +35,27 @@ public class SessionManager {
         prefs = context.getSharedPreferences(PREF_NAME, Context.MODE_PRIVATE);
         editor = prefs.edit();
         
+        Log.d(TAG, "SessionManager initialized");
+        Log.d(TAG, "Auto login enabled: " + prefs.getBoolean(KEY_IS_AUTO_LOGIN_ENABLED, false));
+        Log.d(TAG, "Has employee ID: " + prefs.contains(KEY_EMPLOYEE_ID));
+        Log.d(TAG, "Has login timestamp: " + prefs.contains(KEY_LOGIN_TIMESTAMP));
+        Log.d(TAG, "Has encryption key: " + prefs.contains(KEY_ENCRYPTION_KEY));
+        
+        // 새 설치인지 확인 - 아무 데이터도 없으면 새 설치
+        boolean isNewInstall = !prefs.contains(KEY_IS_AUTO_LOGIN_ENABLED) && 
+                              !prefs.contains(KEY_EMPLOYEE_ID) &&
+                              !prefs.contains(KEY_LOGIN_TIMESTAMP);
+        
+        Log.d(TAG, "Is new install: " + isNewInstall);
+        
+        if (isNewInstall) {
+            Log.d(TAG, "New installation detected - ensuring clean state");
+            editor.clear();
+            editor.putBoolean(KEY_IS_AUTO_LOGIN_ENABLED, false);
+            editor.apply();
+            Log.d(TAG, "Set AUTO_LOGIN_ENABLED to false for new installation");
+        }
+        
         // 암호화 키가 없으면 생성
         if (!prefs.contains(KEY_ENCRYPTION_KEY)) {
             generateAndSaveEncryptionKey();
@@ -57,7 +78,42 @@ public class SessionManager {
      * 자동 로그인 설정 확인
      */
     public boolean isAutoLoginEnabled() {
-        return prefs.getBoolean(KEY_IS_AUTO_LOGIN_ENABLED, false);
+        boolean enabled = prefs.getBoolean(KEY_IS_AUTO_LOGIN_ENABLED, false);
+        Log.d(TAG, "isAutoLoginEnabled() returning: " + enabled);
+        
+        // 새 설치라면 강제로 false 반환
+        if (isNewInstallation()) {
+            Log.d(TAG, "New installation detected - forcing auto login to false");
+            enabled = false;
+            // 새 설치 시 자동으로 false로 설정
+            setAutoLoginEnabled(false);
+        }
+        
+        return enabled;
+    }
+    
+    /**
+     * 새 설치인지 확인
+     */
+    private boolean isNewInstallation() {
+        boolean hasAutoLogin = prefs.contains(KEY_IS_AUTO_LOGIN_ENABLED);
+        boolean hasEmployeeId = prefs.contains(KEY_EMPLOYEE_ID);
+        boolean hasTimestamp = prefs.contains(KEY_LOGIN_TIMESTAMP);
+        boolean hasEncryptionKey = prefs.contains(KEY_ENCRYPTION_KEY);
+        
+        Log.d(TAG, "=== NEW INSTALLATION CHECK ===");
+        Log.d(TAG, "Has AUTO_LOGIN key: " + hasAutoLogin);
+        Log.d(TAG, "Has EMPLOYEE_ID key: " + hasEmployeeId);
+        Log.d(TAG, "Has LOGIN_TIMESTAMP key: " + hasTimestamp);
+        Log.d(TAG, "Has ENCRYPTION_KEY key: " + hasEncryptionKey);
+        
+        // SharedPreferences에 아무 키도 없으면 새 설치
+        boolean isNewInstall = !hasAutoLogin && !hasEmployeeId && !hasTimestamp && !hasEncryptionKey;
+        
+        Log.d(TAG, "Is new installation: " + isNewInstall);
+        Log.d(TAG, "=== END NEW INSTALLATION CHECK ===");
+        
+        return isNewInstall;
     }
     
     /**
@@ -112,7 +168,9 @@ public class SessionManager {
     public String getEmployeeId() {
         try {
             String encrypted = prefs.getString(KEY_EMPLOYEE_ID, null);
-            return encrypted != null ? decrypt(encrypted) : null;
+            String result = encrypted != null ? decrypt(encrypted) : null;
+            Log.d(TAG, "getEmployeeId() returning: " + result);
+            return result;
         } catch (Exception e) {
             Log.e(TAG, "Error getting employee ID: " + e.getMessage());
             return null;
@@ -132,7 +190,9 @@ public class SessionManager {
     public String getEmployeeType() {
         try {
             String encrypted = prefs.getString(KEY_EMPLOYEE_TYPE, null);
-            return encrypted != null ? decrypt(encrypted) : null;
+            String result = encrypted != null ? decrypt(encrypted) : null;
+            Log.d(TAG, "getEmployeeType() returning: " + result);
+            return result;
         } catch (Exception e) {
             Log.e(TAG, "Error getting employee type: " + e.getMessage());
             return null;
@@ -166,9 +226,13 @@ public class SessionManager {
      * 로그아웃 처리
      */
     public void logout() {
-        clearSession();
-        setAutoLoginEnabled(false);
-        Log.d(TAG, "User logged out");
+        Log.d(TAG, "logout() called - clearing all session data");
+        
+        // 모든 세션 관련 데이터 완전 삭제
+        editor.clear();
+        editor.apply();
+        
+        Log.d(TAG, "User logged out - all session data cleared");
     }
     
     /**

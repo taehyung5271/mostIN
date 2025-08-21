@@ -12,7 +12,7 @@ import java.security.cert.X509Certificate;
 
 public class ApiClient {
 
-    private static final String BASE_URL = "https://52.79.240.42:8443/"; // Your EC2 server IP and port
+    private static final String BASE_URL = "https://52.79.240.42:8443/"; // Production server
     private static Retrofit retrofit = null;
 
     public static Retrofit getClient() {

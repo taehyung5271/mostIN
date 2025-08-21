@@ -3,6 +3,7 @@ package com.example.mostin.adapters;
 import android.content.Context;
 import android.text.TextWatcher;
 import android.text.Editable;
+import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -15,6 +16,7 @@ import com.google.android.material.button.MaterialButton;
 import com.example.mostin.R;
 import com.example.mostin.models.GoodsModel;
 
+import java.util.ArrayList;
 import java.util.List;
 
 public class OrderingAdapter extends RecyclerView.Adapter<OrderingAdapter.ViewHolder> {
@@ -26,8 +28,9 @@ public class OrderingAdapter extends RecyclerView.Adapter<OrderingAdapter.ViewHo
     }
 
     public OrderingAdapter(List<GoodsModel> goodsList, OnCopyClickListener listener) {
-        this.goodsList = goodsList;
+        this.goodsList = new ArrayList<>(goodsList != null ? goodsList : new ArrayList<>());
         this.listener = listener;
+        Log.d("OrderingAdapter", "Constructor called with " + this.goodsList.size() + " items");
     }
 
     @NonNull
@@ -69,6 +72,21 @@ public class OrderingAdapter extends RecyclerView.Adapter<OrderingAdapter.ViewHo
     @Override
     public int getItemCount() {
         return goodsList.size();
+    }
+    
+    public void updateList(List<GoodsModel> newGoodsList) {
+        Log.d("OrderingAdapter", "updateList() called with " + newGoodsList.size() + " items");
+        Log.d("OrderingAdapter", "Previous size: " + this.goodsList.size());
+        
+        this.goodsList.clear();
+        this.goodsList.addAll(newGoodsList);
+        
+        Log.d("OrderingAdapter", "New size after update: " + this.goodsList.size());
+        Log.d("OrderingAdapter", "Calling notifyDataSetChanged()");
+        
+        notifyDataSetChanged();
+        
+        Log.d("OrderingAdapter", "notifyDataSetChanged() completed");
     }
 
     static class ViewHolder extends RecyclerView.ViewHolder {
