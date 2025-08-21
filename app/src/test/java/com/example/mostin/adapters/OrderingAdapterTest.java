@@ -56,15 +56,11 @@ public class OrderingAdapterTest {
 
     @Test
     public void should_handleNullList_when_adapterCreatedWithNullList() {
-        // Given & When & Then
-        try {
-            OrderingAdapter nullAdapter = new OrderingAdapter(null, mockListener);
-            int count = nullAdapter.getItemCount();
-            fail("Expected exception when adapter created with null list");
-        } catch (Exception e) {
-            // Expected behavior for null list
-            assertTrue("Exception thrown for null list", true);
-        }
+        // Given & When
+        OrderingAdapter nullAdapter = new OrderingAdapter(null, mockListener);
+        
+        // Then - Should handle null by creating empty list
+        assertEquals(0, nullAdapter.getItemCount());
     }
 
     @Test
@@ -263,10 +259,10 @@ public class OrderingAdapterTest {
         // When - Modify the original list that was passed to adapter
         mockGoodsList.add(new GoodsModel("999999", "New Product"));
         
-        // Then - Adapter uses reference to the same list, so it should be affected
-        assertEquals(4, adapter.getItemCount()); // Will be affected since it's the same list reference
+        // Then - Adapter creates a copy, so external modifications don't affect it
+        assertEquals(3, adapter.getItemCount()); // Not affected since adapter has its own copy
         
-        // Note: This test verifies current behavior - adapter keeps reference to original list
+        // Note: This test verifies current behavior - adapter creates defensive copy
     }
 
     @Test

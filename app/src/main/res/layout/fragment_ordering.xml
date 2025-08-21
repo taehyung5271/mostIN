@@ -67,7 +67,7 @@
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:layout_marginTop="16dp"
-                        app:singleSelection="false">
+                        app:singleSelection="true">
 
                         <com.google.android.material.chip.Chip
                             android:id="@+id/chip_all"
@@ -78,24 +78,24 @@
                             style="@style/Widget.Material3.Chip.Filter"/>
 
                         <com.google.android.material.chip.Chip
-                            android:id="@+id/chip_electronics"
+                            android:id="@+id/chip_domestic_beer"
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:text="전자제품"
+                            android:text="국산맥주"
                             style="@style/Widget.Material3.Chip.Filter"/>
 
                         <com.google.android.material.chip.Chip
-                            android:id="@+id/chip_office"
+                            android:id="@+id/chip_imported_beer"
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:text="사무용품"
+                            android:text="수입맥주"
                             style="@style/Widget.Material3.Chip.Filter"/>
 
                         <com.google.android.material.chip.Chip
-                            android:id="@+id/chip_supplies"
+                            android:id="@+id/chip_non_alcohol_beer"
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:text="소모품"
+                            android:text="논알콜"
                             style="@style/Widget.Material3.Chip.Filter"/>
 
                     </com.google.android.material.chip.ChipGroup>

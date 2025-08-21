@@ -56,7 +56,22 @@ public class LoginActivity extends AppCompatActivity {
 
         // 자동 로그인 체크박스 상태 설정
         if (checkBoxAutoLogin != null) {
-            checkBoxAutoLogin.setChecked(sessionManager.isAutoLoginEnabled());
+            boolean autoLoginEnabled = sessionManager.isAutoLoginEnabled();
+            Log.d("LoginActivity", "=== CHECKBOX SETUP ===");
+            Log.d("LoginActivity", "SessionManager.isAutoLoginEnabled(): " + autoLoginEnabled);
+            Log.d("LoginActivity", "Is definitely new install: " + isDefinitelyNewInstall());
+            
+            // 새 설치라면 무조건 false로 설정
+            if (isDefinitelyNewInstall()) {
+                Log.d("LoginActivity", "🚫 New install detected - forcing checkbox to FALSE");
+                checkBoxAutoLogin.setChecked(false);
+                sessionManager.setAutoLoginEnabled(false);
+            } else {
+                checkBoxAutoLogin.setChecked(autoLoginEnabled);
+            }
+            
+            Log.d("LoginActivity", "Final checkbox state: " + checkBoxAutoLogin.isChecked());
+            Log.d("LoginActivity", "=== END CHECKBOX SETUP ===");
         }
 
         btnLogin.setOnClickListener(v -> performLogin());
@@ -66,28 +81,103 @@ public class LoginActivity extends AppCompatActivity {
      * 자동 로그인 확인
      */
     private void checkAutoLogin() {
-        if (sessionManager.isValidSession()) {
-            // 로딩 인디케이터 표시
-            showAutoLoginProgress(true);
+        Log.d("LoginActivity", "=== AUTO LOGIN CHECK START ===");
+        Log.d("LoginActivity", "checkAutoLogin() called");
+        
+        // 절대적으로 새 설치인지 확인 (매우 강력한 체크)
+        if (isDefinitelyNewInstall()) {
+            Log.d("LoginActivity", "🚫 DEFINITELY NEW INSTALL - BLOCKING ALL AUTO LOGIN");
+            return;
+        }
+        
+        // 먼저 SharedPreferences의 모든 상태를 확인
+        boolean autoLoginEnabled = sessionManager.isAutoLoginEnabled();
+        boolean validSession = sessionManager.isValidSession();
+        
+        Log.d("LoginActivity", "Auto login enabled: " + autoLoginEnabled);
+        Log.d("LoginActivity", "Valid session: " + validSession);
+        
+        // 새 설치나 로그아웃 후라면 자동 로그인을 시도하지 않음
+        if (!autoLoginEnabled || !validSession) {
+            Log.d("LoginActivity", "No auto login - showing login screen");
+            return;
+        }
+        
+        // 저장된 사용자 정보 가져오기
+        String employeeId = sessionManager.getEmployeeId();
+        String employeeName = sessionManager.getEmployeeName();
+        String employeeType = sessionManager.getEmployeeType();
+        String workPlaceName = sessionManager.getWorkPlaceName();
+        
+        Log.d("LoginActivity", "Retrieved session data:");
+        Log.d("LoginActivity", "  employeeId: '" + employeeId + "'");
+        Log.d("LoginActivity", "  employeeName: '" + employeeName + "'");
+        Log.d("LoginActivity", "  employeeType: '" + employeeType + "'");
+        Log.d("LoginActivity", "  workPlaceName: '" + workPlaceName + "'");
+        
+        // 필수 정보가 모두 유효한지 확인
+        if (employeeId == null || employeeId.isEmpty() || 
+            employeeName == null || employeeName.isEmpty() ||
+            employeeType == null || employeeType.isEmpty()) {
             
-            // 자동 로그인 처리를 위한 딜레이 (사용자 경험 개선)
-            new android.os.Handler(android.os.Looper.getMainLooper()).postDelayed(() -> {
-                String employeeId = sessionManager.getEmployeeId();
-                String employeeName = sessionManager.getEmployeeName();
-                String employeeType = sessionManager.getEmployeeType();
-                String workPlaceName = sessionManager.getWorkPlaceName();
+            Log.d("LoginActivity", "Invalid session data - clearing all data");
+            sessionManager.clearSession();
+            sessionManager.setAutoLoginEnabled(false);
+            return;
+        }
+        
+        // 의심스러운 "admin" 값 강제 차단
+        if ("admin".equals(employeeType) && (employeeId == null || employeeId.isEmpty() || employeeName == null || employeeName.isEmpty())) {
+            Log.e("LoginActivity", "🚨 SUSPICIOUS ADMIN TYPE WITH EMPTY DATA - BLOCKING");
+            sessionManager.clearSession();
+            sessionManager.setAutoLoginEnabled(false);
+            return;
+        }
+        
+        Log.d("LoginActivity", "All session data valid - proceeding with auto login");
+        
+        // 로딩 인디케이터 표시
+        showAutoLoginProgress(true);
+        
+        // 자동 로그인 처리를 위한 딜레이 (사용자 경험 개선)
+        new android.os.Handler(android.os.Looper.getMainLooper()).postDelayed(() -> {
+            // 세션 갱신
+            sessionManager.refreshSession();
 
-                Log.d("LoginActivity", "Auto login - ID: " + employeeId + ", Type: " + employeeType);
+            // 로딩 인디케이터 숨김
+            showAutoLoginProgress(false);
 
-                // 세션 갱신
-                sessionManager.refreshSession();
-
-                // 로딩 인디케이터 숨김
-                showAutoLoginProgress(false);
-
-                // 사용자 타입에 따라 적절한 화면으로 이동
-                navigateToHomeScreen(employeeId, employeeName, employeeType, workPlaceName);
-            }, 1500); // 1.5초 딜레이
+            // 사용자 타입에 따라 적절한 화면으로 이동
+            navigateToHomeScreen(employeeId, employeeName, employeeType, workPlaceName);
+        }, 1500); // 1.5초 딜레이
+    }
+    
+    /**
+     * 확실한 새 설치인지 확인 (절대적 체크)
+     */
+    private boolean isDefinitelyNewInstall() {
+        try {
+            // 앱의 최초 설치 시간과 현재 시간 비교
+            android.content.pm.PackageManager pm = getPackageManager();
+            android.content.pm.PackageInfo info = pm.getPackageInfo(getPackageName(), 0);
+            long installTime = info.firstInstallTime;
+            long currentTime = System.currentTimeMillis();
+            long timeDifference = currentTime - installTime;
+            
+            // 설치 후 30초 이내라면 새 설치로 간주
+            boolean isNewInstall = timeDifference < 30000; // 30초
+            
+            Log.d("LoginActivity", "Install time: " + installTime);
+            Log.d("LoginActivity", "Current time: " + currentTime);
+            Log.d("LoginActivity", "Time difference: " + timeDifference + "ms");
+            Log.d("LoginActivity", "Is definitely new install: " + isNewInstall);
+            
+            return isNewInstall;
+            
+        } catch (Exception e) {
+            Log.e("LoginActivity", "Error checking install time", e);
+            // 에러 발생 시 안전하게 새 설치로 간주하지 않음
+            return false;
         }
     }
     
@@ -170,14 +260,32 @@ public class LoginActivity extends AppCompatActivity {
      */
     private void navigateToHomeScreen(String employeeId, String employeeName, 
                                      String employeeType, String workPlaceName) {
+        Log.d("LoginActivity", "navigateToHomeScreen() called with:");
+        Log.d("LoginActivity", "  employeeId: '" + employeeId + "'");
+        Log.d("LoginActivity", "  employeeName: '" + employeeName + "'");
+        Log.d("LoginActivity", "  employeeType: '" + employeeType + "'");
+        Log.d("LoginActivity", "  workPlaceName: '" + workPlaceName + "'");
+        
+        // 새 설치에서 이상한 데이터가 들어오는 경우 차단
+        if (employeeId == null || employeeId.isEmpty() ||
+            employeeName == null || employeeName.isEmpty() ||
+            employeeType == null || employeeType.isEmpty()) {
+            Log.e("LoginActivity", "Invalid navigation data - staying on login screen");
+            sessionManager.clearSession();
+            sessionManager.setAutoLoginEnabled(false);
+            return;
+        }
+        
         Intent intent;
         if ("admin".equals(employeeType)) {
+            Log.d("LoginActivity", "Navigating to AdminHomeScreen");
             intent = new Intent(LoginActivity.this, AdminHomeScreen.class);
             Bundle adminInfo = new Bundle();
             adminInfo.putString("employee_id", employeeId);
             adminInfo.putString("employee_name", employeeName);
             intent.putExtras(adminInfo);
         } else {
+            Log.d("LoginActivity", "Navigating to HomeScreen");
             intent = new Intent(LoginActivity.this, HomeScreen.class);
             Bundle userInfo = new Bundle();
             userInfo.putString("employee_id", employeeId);

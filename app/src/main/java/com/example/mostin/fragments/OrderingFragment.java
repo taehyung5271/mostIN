@@ -13,6 +13,8 @@ import android.view.ViewGroup;
 import android.widget.Button;
 import android.widget.EditText;
 import android.widget.Toast;
+import android.text.TextWatcher;
+import android.text.Editable;
 import androidx.annotation.NonNull;
 import androidx.fragment.app.Fragment;
 import androidx.recyclerview.widget.DividerItemDecoration;
@@ -29,6 +31,8 @@ import com.example.mostin.utils.AppCache;
 import com.example.mostin.utils.SpaceItemDecoration;
 import com.google.android.material.button.MaterialButton;
 import com.google.android.material.textfield.TextInputEditText;
+import com.google.android.material.chip.Chip;
+import com.google.android.material.chip.ChipGroup;
 
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
@@ -45,6 +49,8 @@ import retrofit2.Response;
 public class OrderingFragment extends Fragment implements OrderingAdapter.OnCopyClickListener {
     private RecyclerView recyclerView;
     private TextInputEditText orderSummaryEdit;
+    private TextInputEditText searchEditText;
+    private ChipGroup chipGroup;
     private MaterialButton copyAllButton;
     private MaterialButton clearAllButton;
     
@@ -52,6 +58,7 @@ public class OrderingFragment extends Fragment implements OrderingAdapter.OnCopy
     private String employeeName;
     private OrderingAdapter adapter;
     private List<GoodsModel> goodsList;
+    private List<GoodsModel> filteredGoodsList;
 
     public OrderingFragment() {
     }
@@ -63,8 +70,13 @@ public class OrderingFragment extends Fragment implements OrderingAdapter.OnCopy
         // 초기화
         recyclerView = view.findViewById(R.id.recycler_goods);
         orderSummaryEdit = view.findViewById(R.id.edit_order_summary);
+        searchEditText = view.findViewById(R.id.edit_search);
+        chipGroup = view.findViewById(R.id.chip_group_categories);
         copyAllButton = view.findViewById(R.id.btn_copy_all);
         clearAllButton = view.findViewById(R.id.btn_clear_all);
+        
+        // 필터링된 리스트 초기화
+        filteredGoodsList = new ArrayList<>();
         
 
         // 사용자 정보 가져오기
@@ -86,6 +98,7 @@ public class OrderingFragment extends Fragment implements OrderingAdapter.OnCopy
         recyclerView.addItemDecoration(dividerItemDecoration);
         
         loadGoodsData();
+        setupSearchAndFilter();
 
         // 버튼 설정
         copyAllButton.setOnClickListener(v -> copyOrderSummary());
@@ -132,14 +145,19 @@ public class OrderingFragment extends Fragment implements OrderingAdapter.OnCopy
     }
 
     private void loadGoodsData() {
-        // Check cache first
-        if (AppCache.getInstance().containsKey("goodsList")) {
-            Log.d("OrderingFragment", "Loading goods data from cache.");
-            this.goodsList = AppCache.getInstance().getCachedList("goodsList", GoodsModel.class);
-            adapter = new OrderingAdapter(this.goodsList, this);
-            recyclerView.setAdapter(adapter);
-            return;
-        }
+        Log.d("OrderingFragment", "Loading goods data from API (cache temporarily disabled for debugging).");
+        
+        // 캐시 체크 임시 비활성화 - 디버깅용
+        // if (AppCache.getInstance().containsKey("goodsList")) {
+        //     Log.d("OrderingFragment", "Loading goods data from cache.");
+        //     this.goodsList = AppCache.getInstance().getCachedList("goodsList", GoodsModel.class);
+        //     this.filteredGoodsList = new ArrayList<>(this.goodsList);
+        //     adapter = new OrderingAdapter(this.filteredGoodsList, this);
+        //     recyclerView.setAdapter(adapter);
+        //     // 캐시에서 로드된 후 초기 필터링 적용
+        //     filterGoods();
+        //     return;
+        // }
 
         Log.d("OrderingFragment", "Loading goods data from API.");
         ApiService apiService = ApiClient.getApiService();
@@ -148,20 +166,55 @@ public class OrderingFragment extends Fragment implements OrderingAdapter.OnCopy
         call.enqueue(new Callback<List<GoodsModel>>() {
             @Override
             public void onResponse(Call<List<GoodsModel>> call, Response<List<GoodsModel>> response) {
+                Log.d("OrderingFragment", "API Response received. Code: " + response.code());
+                
                 if (response.isSuccessful() && response.body() != null) {
                     goodsList = response.body();
+                    
+                    Log.d("OrderingFragment", "API returned " + goodsList.size() + " items");
+                    for (int i = 0; i < Math.min(goodsList.size(), 3); i++) {
+                        GoodsModel item = goodsList.get(i);
+                        Log.d("OrderingFragment", "Item " + i + ": " + item.getName() + ", Category: " + item.getCategory());
+                    }
+                    
+                    // API 데이터가 비어있으면 샘플 데이터 사용
+                    if (goodsList.isEmpty()) {
+                        Log.d("OrderingFragment", "API returned empty list, using sample data");
+                        goodsList = createSampleData();
+                    }
+                    
+                    filteredGoodsList = new ArrayList<>(goodsList);
                     AppCache.getInstance().putCachedList("goodsList", goodsList);
-                    adapter = new OrderingAdapter(goodsList, OrderingFragment.this);
+                    adapter = new OrderingAdapter(filteredGoodsList, OrderingFragment.this);
                     recyclerView.setAdapter(adapter);
+                    // API에서 로드된 후 초기 필터링 적용 (전체 선택)
+                    filterGoods();
                 } else {
-                    Toast.makeText(getContext(), "상품 목록을 불러오는 데 실패했습니다.", Toast.LENGTH_SHORT).show();
+                    Log.e("OrderingFragment", "API failed. Response code: " + response.code());
+                    // 실패 시 샘플 데이터 사용
+                    goodsList = createSampleData();
+                    filteredGoodsList = new ArrayList<>(goodsList);
+                    adapter = new OrderingAdapter(filteredGoodsList, OrderingFragment.this);
+                    recyclerView.setAdapter(adapter);
+                    // 샘플 데이터 로드 후 초기 필터링 적용
+                    filterGoods();
+                    Toast.makeText(getContext(), "서버 연결 실패. 샘플 데이터를 사용합니다.", Toast.LENGTH_SHORT).show();
                 }
             }
 
             @Override
             public void onFailure(Call<List<GoodsModel>> call, Throwable t) {
-                Log.e("OrderingFragment", "Error loading goods data", t);
-                Toast.makeText(getContext(), "상품 목록 로딩 중 오류가 발생했습니다.", Toast.LENGTH_SHORT).show();
+                Log.e("OrderingFragment", "API call failed", t);
+                
+                // API 실패 시 샘플 데이터 생성
+                goodsList = createSampleData();
+                filteredGoodsList = new ArrayList<>(goodsList);
+                adapter = new OrderingAdapter(filteredGoodsList, OrderingFragment.this);
+                recyclerView.setAdapter(adapter);
+                // API 실패 시에도 초기 필터링 적용
+                filterGoods();
+                
+                Toast.makeText(getContext(), "서버 연결 실패. 샘플 데이터를 사용합니다.", Toast.LENGTH_SHORT).show();
             }
         });
     }
@@ -242,5 +295,181 @@ public class OrderingFragment extends Fragment implements OrderingAdapter.OnCopy
                 Log.e("OrderSave", "Error deleting previous orders", t);
             }
         });
+    }
+
+    private void setupSearchAndFilter() {
+        // 검색 기능 설정
+        searchEditText.addTextChangedListener(new TextWatcher() {
+            @Override
+            public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
+
+            @Override
+            public void onTextChanged(CharSequence s, int start, int before, int count) {
+                filterGoods();
+            }
+
+            @Override
+            public void afterTextChanged(Editable s) {}
+        });
+
+        // 칩 클릭 리스너 설정
+        chipGroup.setOnCheckedStateChangeListener((group, checkedIds) -> filterGoods());
+    }
+
+    private void filterGoods() {
+        if (goodsList == null) {
+            Log.d("OrderingFragment", "goodsList is null, cannot filter");
+            // 어댑터가 있다면 빈 리스트로라도 업데이트
+            if (adapter != null) {
+                adapter.updateList(new ArrayList<>());
+            }
+            return;
+        }
+        
+        if (goodsList.isEmpty()) {
+            Log.d("OrderingFragment", "goodsList is empty, cannot filter");
+            // 어댑터가 있다면 빈 리스트로라도 업데이트
+            if (adapter != null) {
+                adapter.updateList(new ArrayList<>());
+            }
+            return;
+        }
+
+        filteredGoodsList.clear();
+        String searchText = searchEditText.getText().toString().toLowerCase().trim();
+        
+        // 선택된 카테고리 확인
+        GoodsModel.Category selectedCategory = getSelectedCategory();
+        
+        Log.d("OrderingFragment", "Filtering - Search: '" + searchText + "', Category: " + selectedCategory);
+        Log.d("OrderingFragment", "Total goods: " + goodsList.size());
+        
+        // 첫 번째 아이템의 카테고리 상세 정보 출력
+        if (!goodsList.isEmpty()) {
+            GoodsModel firstItem = goodsList.get(0);
+            Log.d("OrderingFragment", "First item details - Name: " + firstItem.getName() + 
+                  ", Category: " + firstItem.getCategory() + 
+                  ", Category class: " + (firstItem.getCategory() != null ? firstItem.getCategory().getClass().getName() : "null"));
+        }
+
+        for (GoodsModel goods : goodsList) {
+            Log.d("OrderingFragment", "Checking goods: " + goods.getName() + ", Category: " + goods.getCategory());
+            
+            boolean matchesSearch = searchText.isEmpty() || 
+                (goods.getName() != null && goods.getName().toLowerCase().contains(searchText));
+            
+            // 카테고리 필터링 로직 개선
+            boolean matchesCategory;
+            if (selectedCategory == null) {
+                // "전체" 선택 시 모든 상품 표시
+                matchesCategory = true;
+                Log.d("OrderingFragment", "  - Selected category is NULL (전체), including item");
+            } else {
+                // 특정 카테고리 선택 시
+                if (goods.getCategory() == null) {
+                    // 카테고리가 null인 상품들은 "전체"에서만 표시
+                    matchesCategory = false;
+                    Log.d("OrderingFragment", "  - Item category is NULL, excluding from specific category filter");
+                } else {
+                    matchesCategory = goods.getCategory().equals(selectedCategory);
+                    Log.d("OrderingFragment", "  - Comparing: " + goods.getCategory() + " equals " + selectedCategory + " = " + matchesCategory);
+                }
+            }
+
+            Log.d("OrderingFragment", "  - Matches search: " + matchesSearch + ", Matches category: " + matchesCategory);
+
+            if (matchesSearch && matchesCategory) {
+                filteredGoodsList.add(goods);
+                Log.d("OrderingFragment", "  - Added to filtered list");
+            }
+        }
+
+        Log.d("OrderingFragment", "Filtered result count: " + filteredGoodsList.size());
+
+        // 어댑터 업데이트 - Main Thread에서 실행 보장
+        if (adapter != null) {
+            Log.d("OrderingFragment", "Calling adapter.updateList() with " + filteredGoodsList.size() + " items");
+            
+            // UI Thread에서 실행 보장
+            if (getActivity() != null) {
+                getActivity().runOnUiThread(() -> {
+                    adapter.updateList(filteredGoodsList);
+                    Log.d("OrderingFragment", "adapter.updateList() completed on UI thread");
+                });
+            } else {
+                adapter.updateList(filteredGoodsList);
+                Log.d("OrderingFragment", "adapter.updateList() completed (no activity)");
+            }
+        } else {
+            Log.e("OrderingFragment", "adapter is NULL! Cannot update RecyclerView");
+        }
+    }
+
+    private GoodsModel.Category getSelectedCategory() {
+        int checkedId = chipGroup.getCheckedChipId();
+        Log.d("OrderingFragment", "Checked chip ID: " + checkedId + " (chip_all: " + R.id.chip_all + ")");
+        
+        if (checkedId == R.id.chip_all || checkedId == View.NO_ID) {
+            Log.d("OrderingFragment", "Selected category: ALL (null)");
+            return null; // 전체 선택
+        } else if (checkedId == R.id.chip_domestic_beer) {
+            Log.d("OrderingFragment", "Selected category: DOMESTIC_BEER");
+            return GoodsModel.Category.DOMESTIC_BEER;
+        } else if (checkedId == R.id.chip_imported_beer) {
+            Log.d("OrderingFragment", "Selected category: IMPORTED_BEER");
+            return GoodsModel.Category.IMPORTED_BEER;
+        } else if (checkedId == R.id.chip_non_alcohol_beer) {
+            Log.d("OrderingFragment", "Selected category: NON_ALCOHOL_BEER");
+            return GoodsModel.Category.NON_ALCOHOL_BEER;
+        }
+        
+        Log.d("OrderingFragment", "Selected category: UNKNOWN, returning null");
+        return null;
+    }
+
+    private List<GoodsModel> createSampleData() {
+        List<GoodsModel> sampleData = new ArrayList<>();
+        
+        // 국산맥주 샘플
+        GoodsModel domestic1 = new GoodsModel("8801234567001", "카스 프레시 500ml", GoodsModel.Category.DOMESTIC_BEER);
+        GoodsModel domestic2 = new GoodsModel("8801234567002", "하이트 엑스트라 콜드 500ml", GoodsModel.Category.DOMESTIC_BEER);
+        GoodsModel domestic3 = new GoodsModel("8801234567003", "테라 맥주 500ml", GoodsModel.Category.DOMESTIC_BEER);
+        GoodsModel domestic4 = new GoodsModel("8801234567004", "클라우드 생맥주 500ml", GoodsModel.Category.DOMESTIC_BEER);
+        
+        sampleData.add(domestic1);
+        sampleData.add(domestic2);
+        sampleData.add(domestic3);
+        sampleData.add(domestic4);
+        
+        // 수입맥주 샘플  
+        GoodsModel imported1 = new GoodsModel("8801234567005", "버드와이저 500ml", GoodsModel.Category.IMPORTED_BEER);
+        GoodsModel imported2 = new GoodsModel("8801234567006", "산토리 프리미엄 맥주 355ml", GoodsModel.Category.IMPORTED_BEER);
+        GoodsModel imported3 = new GoodsModel("8801234567007", "호가든 화이트 맥주 330ml", GoodsModel.Category.IMPORTED_BEER);
+        GoodsModel imported4 = new GoodsModel("8801234567008", "스텔라 아르투아 330ml", GoodsModel.Category.IMPORTED_BEER);
+        GoodsModel imported5 = new GoodsModel("8801234567009", "코로나 엑스트라 355ml", GoodsModel.Category.IMPORTED_BEER);
+        
+        sampleData.add(imported1);
+        sampleData.add(imported2);
+        sampleData.add(imported3);
+        sampleData.add(imported4);
+        sampleData.add(imported5);
+        
+        // 무알코올맥주 샘플
+        GoodsModel nonAlcohol1 = new GoodsModel("8801234567010", "카스 제로 350ml", GoodsModel.Category.NON_ALCOHOL_BEER);
+        GoodsModel nonAlcohol2 = new GoodsModel("8801234567011", "하이트 제로 355ml", GoodsModel.Category.NON_ALCOHOL_BEER);
+        GoodsModel nonAlcohol3 = new GoodsModel("8801234567012", "클라우드 제로 355ml", GoodsModel.Category.NON_ALCOHOL_BEER);
+        
+        sampleData.add(nonAlcohol1);
+        sampleData.add(nonAlcohol2);
+        sampleData.add(nonAlcohol3);
+        
+        Log.d("OrderingFragment", "Created " + sampleData.size() + " sample products");
+        
+        // 샘플 데이터의 카테고리 확인
+        for (GoodsModel item : sampleData) {
+            Log.d("OrderingFragment", "Sample: " + item.getName() + " -> Category: " + item.getCategory());
+        }
+        
+        return sampleData;
     }
 } 

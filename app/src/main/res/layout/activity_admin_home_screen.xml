@@ -212,7 +212,7 @@
                                 <ImageView
                                     android:layout_width="28dp"
                                     android:layout_height="28dp"
-                                    android:src="@drawable/ic_shopping_cart_24"
+                                    android:src="@drawable/ic_assignment_24"
                                     app:tint="#4F46E5"
                                     android:layout_marginBottom="12dp"/>
 
@@ -220,21 +220,11 @@
                                     android:id="@+id/text_orders_count"
                                     android:layout_width="wrap_content"
                                     android:layout_height="wrap_content"
-                                    android:text="156"
-                                    android:textAppearance="@style/TextAppearance.Material3.HeadlineSmall"
+                                    android:text="발주 내역"
+                                    android:textAppearance="@style/TextAppearance.Material3.BodyLarge"
                                     android:textColor="@android:color/black"
                                     android:textStyle="bold"
-                                    android:layout_marginBottom="4dp"/>
-
-                                <TextView
-                                    android:layout_width="wrap_content"
-                                    android:layout_height="wrap_content"
-                                    android:text="이번달 발주"
-                                    android:textAppearance="@style/TextAppearance.Material3.BodySmall"
-                                    android:textColor="#666666"
-                                    android:gravity="center"
-                                    android:maxLines="1"
-                                    android:ellipsize="end"/>
+                                    android:gravity="center"/>
 
                             </LinearLayout>
                         </com.google.android.material.card.MaterialCardView>
@@ -318,7 +308,7 @@
                                 <ImageView
                                     android:layout_width="28dp"
                                     android:layout_height="28dp"
-                                    android:src="@drawable/ic_history_24"
+                                    android:src="@drawable/ic_person_24"
                                     app:tint="#F59E0B"
                                     android:layout_marginBottom="12dp"/>
 
@@ -326,21 +316,11 @@
                                     android:id="@+id/text_notifications_count"
                                     android:layout_width="wrap_content"
                                     android:layout_height="wrap_content"
-                                    android:text="3"
-                                    android:textAppearance="@style/TextAppearance.Material3.HeadlineSmall"
+                                    android:text="직원 출근 내역"
+                                    android:textAppearance="@style/TextAppearance.Material3.BodyLarge"
                                     android:textColor="@android:color/black"
                                     android:textStyle="bold"
-                                    android:layout_marginBottom="4dp"/>
-
-                                <TextView
-                                    android:layout_width="wrap_content"
-                                    android:layout_height="wrap_content"
-                                    android:text="새 알림"
-                                    android:textAppearance="@style/TextAppearance.Material3.BodySmall"
-                                    android:textColor="#666666"
-                                    android:gravity="center"
-                                    android:maxLines="1"
-                                    android:ellipsize="end"/>
+                                    android:gravity="center"/>
 
                             </LinearLayout>
                         </com.google.android.material.card.MaterialCardView>

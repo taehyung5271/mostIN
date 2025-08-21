@@ -18,8 +18,8 @@ public class GoodsCache {
     private static final String KEY_CACHE_TIMESTAMP = "cache_timestamp";
     private static final String KEY_CACHE_VERSION = "cache_version";
     
-    // 캐시 유효 시간 (60분으로 연장)
-    private static final long CACHE_VALIDITY_DURATION = TimeUnit.MINUTES.toMillis(60);
+    // 캐시 유효 시간 (테스트용 1분으로 단축)
+    private static final long CACHE_VALIDITY_DURATION = TimeUnit.MINUTES.toMillis(1);
     
     private static GoodsCache instance;
     private List<GoodsModel> cachedGoods;

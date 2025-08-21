@@ -13,6 +13,7 @@ import com.example.mostin.R;
 import com.example.mostin.fragments.EmployeeManagementFragment;
 import com.example.mostin.fragments.OrderHistoryFragment;
 import com.example.mostin.fragments.AdminGoodsFragment;
+import com.example.mostin.fragments.EmployeeAttendanceFragment;
 import com.example.mostin.utils.SessionManager;
 import com.example.mostin.api.ApiClient;
 import com.example.mostin.api.ApiService;
@@ -183,7 +184,7 @@ public class AdminHomeScreen extends AppCompatActivity implements NavigationView
         if (cardNotifications != null) {
             cardNotifications.setOnClickListener(v -> {
                 animateCardClick(cardNotifications);
-                Toast.makeText(this, "알림 기능 준비 중입니다", Toast.LENGTH_SHORT).show();
+                navigateToFragment(new EmployeeAttendanceFragment(), "직원 출근 확인");
             });
         }
 
@@ -238,9 +239,7 @@ public class AdminHomeScreen extends AppCompatActivity implements NavigationView
         // 상품 수 조회
         loadGoodsCount();
         
-        // 임시 데이터 (추후 API 구현 필요)
-        if (textOrdersCount != null) textOrdersCount.setText("156");
-        if (textNotificationsCount != null) textNotificationsCount.setText("3");
+        // 카드 텍스트는 XML에서 설정됨 (추가 설정 불필요)
         
         Log.d("AdminHomeScreen", "Dashboard stats loading started");
     }
