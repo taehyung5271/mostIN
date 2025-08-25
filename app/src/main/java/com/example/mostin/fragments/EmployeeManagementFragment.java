@@ -21,6 +21,7 @@ import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
 import com.example.mostin.R;
+import com.example.mostin.adapters.CustomDropdownAdapter;
 import com.example.mostin.adapters.EmployeeAdapter;
 import com.example.mostin.api.ApiClient;
 import com.example.mostin.api.ApiService;
@@ -166,10 +167,8 @@ public class EmployeeManagementFragment extends Fragment {
         // 직원 유형 스피너 설정 (신규 추가 시에만)
         if (!isEditMode) {
             Spinner spinnerType = dialogView.findViewById(R.id.spinner_employee_type);
-            ArrayAdapter<String> typeAdapter = new ArrayAdapter<>(requireContext(),
-                    android.R.layout.simple_spinner_item,
-                    new String[]{"MD", "SV"});
-            typeAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
+            CustomDropdownAdapter<String> typeAdapter = new CustomDropdownAdapter<>(requireContext(),
+                    java.util.Arrays.asList("MD", "SV"));
             spinnerType.setAdapter(typeAdapter);
         }
 
@@ -236,12 +235,8 @@ public class EmployeeManagementFragment extends Fragment {
                     List<String> workPlaces = response.body().stream()
                             .map(WorkPlace::getWorkPlaceName)
                             .collect(Collectors.toList());
-
-                    ArrayAdapter<String> adapter = new ArrayAdapter<>(requireContext(),
-                            android.R.layout.simple_spinner_item, workPlaces);
-                    adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
+                    CustomDropdownAdapter<String> adapter = new CustomDropdownAdapter<>(requireContext(), workPlaces);
                     spinner.setAdapter(adapter);
-
                     if (currentWorkplace != null) {
                         int position = workPlaces.indexOf(currentWorkplace);
                         if (position >= 0) {

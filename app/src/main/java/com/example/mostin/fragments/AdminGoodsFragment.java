@@ -20,6 +20,7 @@ import com.example.mostin.api.ApiService;
 import com.example.mostin.utils.GoodsCache;
 import com.example.mostin.activities.AdminHomeScreen;
 
+import java.util.ArrayList;
 import java.util.List;
 
 import retrofit2.Call;
@@ -73,6 +74,10 @@ public class AdminGoodsFragment extends Fragment implements KeyboardStateListene
     private List<GoodsModel> goodsList;
     private int currentMode = 0; // 0: 일반모드, 1: 삽입모드, 2: 수정모드, 3: 삭제모드
     
+    // 위저드 편집 모드 추가
+    private int wizardStep = 0; // 0: 비활성, 1: 바코드단계, 2: 카테고리단계
+    private LinearLayout tabContainer;
+    private LinearLayout tabBarcode, tabCategory;
     
     // 캐싱 시스템
     private GoodsCache goodsCache;
@@ -123,6 +128,11 @@ public class AdminGoodsFragment extends Fragment implements KeyboardStateListene
         statusIcon = view.findViewById(R.id.statusIcon);
         statusText = view.findViewById(R.id.statusText);
         fixedActionBtn = view.findViewById(R.id.fixedActionBtn);
+        
+        // 탭 컨테이너 참조
+        tabContainer = view.findViewById(R.id.tabContainer);
+        tabBarcode = view.findViewById(R.id.tab_barcode);
+        tabCategory = view.findViewById(R.id.tab_category);
         
         // 고정 액션 버튼 클릭 리스너 설정
         if (fixedActionBtn != null) {
@@ -260,10 +270,132 @@ public class AdminGoodsFragment extends Fragment implements KeyboardStateListene
             statusBar.animate()
                 .alpha(0.0f)
                 .setDuration(200)
-                .withEndAction(() -> statusBar.setVisibility(View.GONE))
+                .withEndAction(() -> {
+                    statusBar.setVisibility(View.GONE);
+                    if (tabContainer != null) {
+                        tabContainer.setVisibility(View.GONE);
+                    }
+                })
                 .start();
                 
             Log.d(TAG, "스티키 상태 바 숨김");
+        }
+    }
+    
+    /**
+     * 위저드 상태바 표시
+     */
+    private void showWizardStatusBar() {
+        if (statusBar != null) {
+            // 상태 바 기본 표시
+            statusBar.setVisibility(View.VISIBLE);
+            statusBar.setAlpha(0.0f);
+            statusBar.animate()
+                .alpha(1.0f)
+                .setDuration(300)
+                .start();
+            
+            // 탭 컨테이너 표시
+            if (tabContainer != null) {
+                tabContainer.setVisibility(View.VISIBLE);
+            }
+            
+            // 위저드 상태 업데이트
+            updateWizardStatus();
+            
+            Log.d(TAG, "위저드 상태 바 표시 - " + wizardStep + "단계");
+        }
+    }
+    
+    /**
+     * 위저드 상태 업데이트
+     */
+    private void updateWizardStatus() {
+        if (statusIcon != null && statusText != null && fixedActionBtn != null) {
+            if (wizardStep == 1) {
+                // 1단계: 바코드/상품명 편집
+                statusIcon.setImageResource(R.drawable.ic_edit_24);
+                statusIcon.clearColorFilter(); // 기존 colorFilter 제거
+                statusIcon.setImageTintList(android.content.res.ColorStateList.valueOf(
+                    getResources().getColor(android.R.color.holo_orange_light, null)));
+                statusText.setText("편집모드");
+                statusText.setTextColor(getResources().getColor(android.R.color.holo_orange_light, null));
+                fixedActionBtn.setText("다음");
+                // 노란색 스타일 적용
+                fixedActionBtn.setBackgroundTintList(android.content.res.ColorStateList.valueOf(
+                    getResources().getColor(android.R.color.holo_orange_light, null)));
+                updateTabStates(true, false); // 바코드탭 활성화
+            } else if (wizardStep == 2) {
+                // 2단계: 카테고리 편집 (연필 아이콘 유지)
+                statusIcon.setImageResource(R.drawable.ic_edit_24);
+                statusIcon.clearColorFilter(); // 기존 colorFilter 제거
+                statusIcon.setImageTintList(android.content.res.ColorStateList.valueOf(
+                    getResources().getColor(android.R.color.holo_orange_light, null)));
+                statusText.setText("편집모드");
+                statusText.setTextColor(getResources().getColor(android.R.color.holo_orange_light, null));
+                fixedActionBtn.setText("수정완료");
+                // 노란색 스타일 적용
+                fixedActionBtn.setBackgroundTintList(android.content.res.ColorStateList.valueOf(
+                    getResources().getColor(android.R.color.holo_orange_light, null)));
+                updateTabStates(false, true); // 카테고리탭 활성화
+            }
+        }
+    }
+    
+    /**
+     * 탭 상태 업데이트
+     */
+    private void updateTabStates(boolean barcodeActive, boolean categoryActive) {
+        if (tabBarcode != null && tabCategory != null) {
+            // 바코드 탭 상태
+            if (barcodeActive) {
+                tabBarcode.setBackgroundResource(R.drawable.tab_background_active);
+                View barcodeIndicator = tabBarcode.getChildAt(0);
+                if (barcodeIndicator != null) {
+                    barcodeIndicator.setBackgroundResource(R.drawable.tab_indicator_active);
+                }
+                TextView barcodeText = (TextView) tabBarcode.getChildAt(1);
+                if (barcodeText != null) {
+                    barcodeText.setTextColor(getResources().getColor(android.R.color.black, null));
+                    barcodeText.setTypeface(null, android.graphics.Typeface.BOLD);
+                }
+            } else {
+                tabBarcode.setBackgroundResource(R.drawable.tab_background_inactive);
+                View barcodeIndicator = tabBarcode.getChildAt(0);
+                if (barcodeIndicator != null) {
+                    barcodeIndicator.setBackgroundResource(R.drawable.tab_indicator_inactive);
+                }
+                TextView barcodeText = (TextView) tabBarcode.getChildAt(1);
+                if (barcodeText != null) {
+                    barcodeText.setTextColor(getResources().getColor(android.R.color.darker_gray, null));
+                    barcodeText.setTypeface(null, android.graphics.Typeface.NORMAL);
+                }
+            }
+            
+            // 카테고리 탭 상태
+            if (categoryActive) {
+                tabCategory.setBackgroundResource(R.drawable.tab_background_active);
+                View categoryIndicator = tabCategory.getChildAt(0);
+                if (categoryIndicator != null) {
+                    categoryIndicator.setBackgroundResource(R.drawable.tab_indicator_active);
+                }
+                TextView categoryText = (TextView) tabCategory.getChildAt(1);
+                if (categoryText != null) {
+                    categoryText.setTextColor(getResources().getColor(android.R.color.black, null));
+                    categoryText.setTypeface(null, android.graphics.Typeface.BOLD);
+                }
+            } else {
+                tabCategory.setBackgroundResource(R.drawable.tab_background_inactive);
+                View categoryIndicator = tabCategory.getChildAt(0);
+                if (categoryIndicator != null) {
+                    categoryIndicator.setBackgroundResource(R.drawable.tab_indicator_inactive);
+                }
+                TextView categoryText = (TextView) tabCategory.getChildAt(1);
+                if (categoryText != null) {
+                    categoryText.setTextColor(getResources().getColor(android.R.color.darker_gray, null));
+                    categoryText.setTypeface(null, android.graphics.Typeface.NORMAL);
+                }
+            }
         }
     }
 
@@ -904,19 +1036,18 @@ public class AdminGoodsFragment extends Fragment implements KeyboardStateListene
     private void handleEditMode() {
         resetMode();
         currentMode = 2;
+        wizardStep = 1; // 바코드 단계부터 시작
         
         // 버튼 상태 업데이트
         updateButtonStates();
         
-        // 상태 바 표시
-        showStatusBar(2);
+        // 위저드 상태 바 표시
+        showWizardStatusBar();
         
         // 어댑터 모드 설정 (2: 편집 모드)
         adapter.setMode(2);
         
-        Log.d(TAG, "편집 모드 진입 - 키보드 감지 시스템 확인");
-        
-        Log.d(TAG, "편집 모드 진입 - 초기 상태 정리");
+        Log.d(TAG, "편집 위저드 모드 진입 - 1단계(바코드) 시작");
         
         // 편집 모드 진입 시 스마트 패딩 초기 상태 설정
         recyclerView.postDelayed(() -> {
@@ -943,6 +1074,12 @@ public class AdminGoodsFragment extends Fragment implements KeyboardStateListene
     }
 
     private void handleActionButton() {
+        // 위저드 모드인 경우 위저드 로직 처리
+        if (currentMode == 2 && wizardStep > 0) {
+            handleWizardAction();
+            return;
+        }
+        
         ApiService apiService = ApiClient.getApiService();
 
         switch (currentMode) {
@@ -1228,6 +1365,7 @@ public class AdminGoodsFragment extends Fragment implements KeyboardStateListene
 
     private void resetMode() {
         currentMode = 0;
+        wizardStep = 0;
         
         // 버튼 상태 업데이트
         updateButtonStates();
@@ -1237,10 +1375,220 @@ public class AdminGoodsFragment extends Fragment implements KeyboardStateListene
         
         // 어댑터 상태 리셋
         if (adapter != null) {
+            // 카테고리 어댑터였다면 원래 어댑터로 복원
+            if (!(recyclerView.getAdapter() instanceof AdminGoodsAdapter)) {
+                recyclerView.setAdapter(adapter);
+                Log.d(TAG, "원래 AdminGoodsAdapter로 복원");
+            }
             adapter.setMode(0); // 일반 모드로 리셋
         }
     }
+    
+    /**
+     * 위저드 액션 처리
+     */
+    private void handleWizardAction() {
+        if (wizardStep == 1) {
+            // 1단계: 바코드 편집 완료 → 카테고리 단계로 이동
+            handleBarcodeStepComplete();
+        } else if (wizardStep == 2) {
+            // 2단계: 카테고리 편집 완료 → 최종 저장
+            handleCategoryStepComplete();
+        }
+    }
+    
+    /**
+     * 바코드 단계 완료 처리
+     */
+    private void handleBarcodeStepComplete() {
+        // 바코드/상품명 변경사항 임시 저장 및 검증
+        List<GoodsModel> validItems = adapter.getValidEditedItems();
+        
+        if (validItems.isEmpty()) {
+            Toast.makeText(getContext(), "편집할 상품이 없습니다", Toast.LENGTH_SHORT).show();
+            return;
+        }
+        
+        // 변경사항이 있는지 확인
+        boolean hasChanges = checkForChanges();
+        
+        if (hasChanges) {
+            Toast.makeText(getContext(), "바코드/상품명 변경사항이 저장되었습니다", Toast.LENGTH_SHORT).show();
+        } else {
+            Toast.makeText(getContext(), "변경사항이 없습니다", Toast.LENGTH_SHORT).show();
+        }
+        
+        // 2단계로 이동
+        wizardStep = 2;
+        updateWizardStatus();
+        
+        // 카테고리 편집 페이지로 전환 (애니메이션 포함)
+        transitionToCategoryPage();
+        
+        Log.d(TAG, "1단계 완료 - 카테고리 단계로 이동");
+    }
+    
+    /**
+     * 카테고리 단계 완료 처리
+     */
+    private void handleCategoryStepComplete() {
+        // 최종 저장 처리 (기존 편집 완료 로직 재사용)
+        performFinalSave();
+    }
+    
+    /**
+     * 변경사항 확인
+     */
+    private boolean checkForChanges() {
+        // 임시로 true 반환 (실제로는 원본 데이터와 비교)
+        return true;
+    }
+    
+    /**
+     * 카테고리 페이지로 전환
+     */
+    private void transitionToCategoryPage() {
+        // 슬라이드 애니메이션으로 페이지 전환
+        recyclerView.animate()
+            .translationX(-recyclerView.getWidth())
+            .setDuration(300)
+            .withEndAction(() -> {
+                // 카테고리 편집용 데이터로 교체
+                setupCategoryEditingData();
+                
+                // 오른쪽에서 슬라이드 인
+                recyclerView.setTranslationX(recyclerView.getWidth());
+                recyclerView.animate()
+                    .translationX(0)
+                    .setDuration(300)
+                    .start();
+            })
+            .start();
+    }
+    
+    /**
+     * 카테고리 편집용 데이터 설정
+     */
+    private void setupCategoryEditingData() {
+        // 현재 상품 리스트 가져오기
+        List<GoodsModel> currentGoods = adapter.getValidEditedItems();
+        
+        if (currentGoods.isEmpty()) {
+            Log.w(TAG, "카테고리 편집할 상품이 없습니다");
+            return;
+        }
+        
+        // 카테고리 편집 전용 어댑터로 교체
+        com.example.mostin.adapters.AdminGoodsCategoryAdapter categoryAdapter = 
+            new com.example.mostin.adapters.AdminGoodsCategoryAdapter(currentGoods);
+        recyclerView.setAdapter(categoryAdapter);
+        
+        Log.d(TAG, "카테고리 편집 어댑터 설정 완료 - " + currentGoods.size() + "개 상품");
+    }
+    
+    /**
+     * 최종 저장 수행
+     */
+    private void performFinalSave() {
+        // 카테고리 어댑터에서 변경된 데이터 가져오기
+        List<GoodsModel> updatedItems = new ArrayList<>();
+        
+        RecyclerView.Adapter currentAdapter = recyclerView.getAdapter();
+        if (currentAdapter instanceof com.example.mostin.adapters.AdminGoodsCategoryAdapter) {
+            com.example.mostin.adapters.AdminGoodsCategoryAdapter categoryAdapter = 
+                (com.example.mostin.adapters.AdminGoodsCategoryAdapter) currentAdapter;
+            updatedItems = categoryAdapter.getUpdatedGoods();
+        } else {
+            // 일반 어댑터에서 가져오기
+            updatedItems = adapter.getValidEditedItems();
+        }
+        
+        if (updatedItems.isEmpty()) {
+            Toast.makeText(getContext(), "변경사항이 없습니다", Toast.LENGTH_SHORT).show();
+            resetMode();
+            return;
+        }
+        
+        // 편집 작업 수행
+        performEditOperations(updatedItems, new ArrayList<>());
+    }
+    
+    /**
+     * 편집 작업 수행 (기존 로직 재사용)
+     */
+    private void performEditOperations(List<GoodsModel> validItems, List<String> itemsToDelete) {
+        ApiService apiService = ApiClient.getApiService();
+        
+        int totalOperations = validItems.size() + itemsToDelete.size();
+        final int[] completedOperations = {0};
+        final int[] updateSuccessCount = {0};
+        final int[] deleteSuccessCount = {0};
+        final int[] failureCount = {0};
+        
+        // 유효한 상품들 업데이트
+        for (GoodsModel item : validItems) {
+            apiService.updateGoods(item.getBarcode(), item).enqueue(new Callback<GoodsModel>() {
+                @Override
+                public void onResponse(Call<GoodsModel> call, Response<GoodsModel> response) {
+                    if (response.isSuccessful()) {
+                        updateSuccessCount[0]++;
+                        Log.d(TAG, "✅ 상품 업데이트 성공: " + item.getBarcode());
+                    } else {
+                        failureCount[0]++;
+                        Log.e(TAG, "❌ 상품 업데이트 실패: " + response.message());
+                    }
+                    
+                    completedOperations[0]++;
+                    if (completedOperations[0] == totalOperations) {
+                        handleEditModeComplete(updateSuccessCount[0], deleteSuccessCount[0], failureCount[0]);
+                    }
+                }
 
+                @Override
+                public void onFailure(Call<GoodsModel> call, Throwable t) {
+                    failureCount[0]++;
+                    completedOperations[0]++;
+                    Log.e(TAG, "🌐 상품 업데이트 네트워크 오류: " + t.getMessage(), t);
+                    
+                    if (completedOperations[0] == totalOperations) {
+                        handleEditModeComplete(updateSuccessCount[0], deleteSuccessCount[0], failureCount[0]);
+                    }
+                }
+            });
+        }
+        
+        // 삭제할 상품들 처리
+        for (String barcode : itemsToDelete) {
+            apiService.deleteGoods(barcode).enqueue(new Callback<Void>() {
+                @Override
+                public void onResponse(Call<Void> call, Response<Void> response) {
+                    if (response.isSuccessful()) {
+                        deleteSuccessCount[0]++;
+                        Log.d(TAG, "✅ 빈 데이터 상품 삭제 성공: " + barcode);
+                    } else {
+                        failureCount[0]++;
+                        Log.e(TAG, "❌ 빈 데이터 상품 삭제 실패: " + barcode + " - " + response.message());
+                    }
+                    
+                    completedOperations[0]++;
+                    if (completedOperations[0] == totalOperations) {
+                        handleEditModeComplete(updateSuccessCount[0], deleteSuccessCount[0], failureCount[0]);
+                    }
+                }
+
+                @Override
+                public void onFailure(Call<Void> call, Throwable t) {
+                    failureCount[0]++;
+                    completedOperations[0]++;
+                    Log.e(TAG, "🌐 빈 데이터 상품 삭제 네트워크 오류: " + barcode + " - " + t.getMessage(), t);
+                    
+                    if (completedOperations[0] == totalOperations) {
+                        handleEditModeComplete(updateSuccessCount[0], deleteSuccessCount[0], failureCount[0]);
+                    }
+                }
+            });
+        }
+    }
 
     /**
      * 특정 위치로 스크롤 후 스마트 포커스 설정 (어댑터에서 호출)
@@ -2484,6 +2832,9 @@ public class AdminGoodsFragment extends Fragment implements KeyboardStateListene
                 Toast.LENGTH_LONG).show();
             Log.w(TAG, "편집 모드 부분 완료: " + totalSuccess + "개 성공, " + failureCount + "개 실패");
         }
+        
+        // 편집 모드 완료 후 리셋
+        resetMode();
     }
 
     /**
