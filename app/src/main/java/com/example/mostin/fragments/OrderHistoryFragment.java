@@ -20,6 +20,7 @@ import androidx.recyclerview.widget.RecyclerView;
 import androidx.swiperefreshlayout.widget.SwipeRefreshLayout;
 
 import com.example.mostin.R;
+import com.example.mostin.adapters.CustomDropdownAdapter;
 import com.example.mostin.adapters.OrderDetailAdapter;
 import com.example.mostin.adapters.OrderHistoryAdapter;
 import com.example.mostin.api.ApiClient;
@@ -130,9 +131,7 @@ public class OrderHistoryFragment extends Fragment {
                 .map(emp -> String.format("%s (%s)", emp.getEmployeeName(), emp.getWorkPlaceName()))
                 .collect(Collectors.toList());
 
-        ArrayAdapter<String> spinnerAdapter = new ArrayAdapter<>(requireContext(),
-                android.R.layout.simple_spinner_item, employeeNames);
-        spinnerAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
+        CustomDropdownAdapter<String> spinnerAdapter = new CustomDropdownAdapter<>(requireContext(), employeeNames);
         employeeSpinner.setAdapter(spinnerAdapter);
 
         employeeSpinner.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {

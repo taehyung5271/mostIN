@@ -6,8 +6,11 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
-import android.widget.Spinner;
+import com.google.android.material.textfield.MaterialAutoCompleteTextView;
 import android.widget.TextView;
+import com.example.mostin.adapters.CategoryAdapter;
+
+import java.util.ArrayList;
 
 import com.example.mostin.R;
 import com.example.mostin.adapters.AttendanceRecordAdapter;
@@ -36,7 +39,7 @@ public class AttendanceManagementFragment extends Fragment {
     private RecyclerView recyclerView;
     private AttendanceRecordAdapter adapter;
     private Calendar currentCalendar;
-    private Spinner spinnerEmployee;
+    private MaterialAutoCompleteTextView spinnerEmployee;
     private TextView textCurrentMonth;
     private TextView textSummary;
     private String selectedEmployeeId = null;
@@ -79,23 +82,27 @@ public class AttendanceManagementFragment extends Fragment {
             public void onResponse(Call<List<EmployeeModel>> call, Response<List<EmployeeModel>> response) {
                 if (response.isSuccessful() && response.body() != null) {
                     List<EmployeeModel> employees = response.body();
-                    ArrayAdapter<EmployeeModel> spinnerAdapter = new ArrayAdapter<>(requireContext(),
-                            android.R.layout.simple_spinner_item,
-                            employees);
-                    spinnerAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
+                    // EmployeeModel을 String으로 변환
+                    List<String> employeeNames = new ArrayList<>();
+                    for (EmployeeModel employee : employees) {
+                        employeeNames.add(employee.toString());
+                    }
+                    CategoryAdapter spinnerAdapter = new CategoryAdapter(requireContext(), employeeNames);
                     spinnerEmployee.setAdapter(spinnerAdapter);
 
-                    spinnerEmployee.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
+                    // 기본값 설정
+                    if (!employees.isEmpty()) {
+                        spinnerEmployee.setText(employees.get(0).toString(), false);
+                        selectedEmployeeId = employees.get(0).getEmployeeId();
+                    }
+
+                    spinnerEmployee.setOnItemClickListener(new AdapterView.OnItemClickListener() {
                         @Override
-                        public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
-                            EmployeeModel employee = (EmployeeModel) parent.getItemAtPosition(position);
+                        public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
+                            // position으로 원본 EmployeeModel에 접근
+                            EmployeeModel employee = employees.get(position);
                             selectedEmployeeId = employee.getEmployeeId();
                             loadAttendanceData();
-                        }
-
-                        @Override
-                        public void onNothingSelected(AdapterView<?> parent) {
-                            selectedEmployeeId = null;
                         }
                     });
                 } else {

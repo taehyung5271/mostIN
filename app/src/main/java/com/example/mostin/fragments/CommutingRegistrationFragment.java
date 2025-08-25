@@ -1,6 +1,8 @@
 package com.example.mostin.fragments;
 
+import android.content.Context;
 import android.content.Intent;
+import android.content.pm.PackageManager;
 import android.location.Location;
 import android.location.LocationManager;
 import android.os.Bundle;
@@ -695,14 +697,14 @@ public class CommutingRegistrationFragment extends Fragment implements OnMapRead
 
     private void checkLocationPermission() {
         String[] permissions = {"android.permission.ACCESS_FINE_LOCATION", "android.permission.ACCESS_COARSE_LOCATION"};
-        if (requireActivity().checkSelfPermission(permissions[0]) != 0 || requireActivity().checkSelfPermission(permissions[1]) != 0) {
+        if (requireActivity().checkSelfPermission(permissions[0]) != PackageManager.PERMISSION_GRANTED || requireActivity().checkSelfPermission(permissions[1]) != PackageManager.PERMISSION_GRANTED) {
             requestPermissions(permissions, PERMISSION_REQUEST_CODE);
         }
     }
 
     private void checkLocationService() {
-        LocationManager locationManager = (LocationManager) requireContext().getSystemService("location");
-        if (locationManager != null && !locationManager.isProviderEnabled("gps") && !locationManager.isProviderEnabled("network")) {
+        LocationManager locationManager = (LocationManager) requireContext().getSystemService(Context.LOCATION_SERVICE);
+        if (locationManager != null && !locationManager.isProviderEnabled(LocationManager.GPS_PROVIDER) && !locationManager.isProviderEnabled(LocationManager.NETWORK_PROVIDER)) {
             new AlertDialog.Builder(requireContext())
                 .setTitle("위치 서비스 비활성화")
                 .setMessage("앱 사용을 위해 위치 서비스가 필요합니다. 위치 설정을 활성화하시겠습니까?")

@@ -16,6 +16,7 @@ import androidx.fragment.app.Fragment;
 import androidx.fragment.app.FragmentTransaction;
 
 import com.example.mostin.R;
+import com.example.mostin.adapters.CustomDropdownAdapter;
 import com.example.mostin.api.ApiClient;
 import com.example.mostin.api.ApiService;
 import com.example.mostin.models.EmployeeModel;
@@ -113,9 +114,7 @@ public class EmployeeAttendanceFragment extends Fragment {
             spinnerItems.add(displayName);
         }
 
-        ArrayAdapter<String> adapter = new ArrayAdapter<>(requireContext(), 
-                android.R.layout.simple_spinner_item, spinnerItems);
-        adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
+        CustomDropdownAdapter<String> adapter = new CustomDropdownAdapter<>(requireContext(), spinnerItems);
         employeeSpinner.setAdapter(adapter);
         
         Log.d(TAG, "Employee spinner setup completed with " + spinnerItems.size() + " items");

@@ -133,21 +133,21 @@
         <LinearLayout
             android:id="@+id/statusBar"
             android:layout_width="match_parent"
-            android:layout_height="48dp"
-            android:orientation="horizontal"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
             android:background="#F8F9FA"
             android:paddingHorizontal="16dp"
-            android:gravity="center_vertical"
+            android:paddingVertical="8dp"
             android:visibility="gone"
             android:layout_marginTop="6dp">
             
-            <!-- Left: Mode Status Display -->
+            <!-- Top: Mode Status Display -->
             <LinearLayout
-                android:layout_width="0dp"
+                android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_weight="1"
                 android:orientation="horizontal"
-                android:gravity="center_vertical">
+                android:gravity="center_vertical"
+                android:layout_marginBottom="8dp">
                 
                 <ImageView
                     android:id="@+id/statusIcon"
@@ -157,24 +157,88 @@
                     
                 <TextView
                     android:id="@+id/statusText"
-                    android:layout_width="wrap_content"
+                    android:layout_width="0dp"
                     android:layout_height="wrap_content"
+                    android:layout_weight="1"
                     android:textAppearance="@style/TextAppearance.Material3.LabelLarge"
                     android:textStyle="bold"/>
+                    
+                <!-- Right: Fixed Action Button -->
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/fixedActionBtn"
+                    android:layout_width="wrap_content"
+                    android:layout_height="40dp"
+                    android:text="완료"
+                    android:textSize="14sp"
+                    android:textStyle="bold"
+                    android:paddingHorizontal="20dp"
+                    app:cornerRadius="20dp"
+                    app:backgroundTint="#6366F1"
+                    android:textColor="@android:color/white"/>
             </LinearLayout>
             
-            <!-- Right: Fixed Action Button -->
-            <com.google.android.material.button.MaterialButton
-                android:id="@+id/fixedActionBtn"
-                android:layout_width="wrap_content"
-                android:layout_height="40dp"
-                android:text="완료"
-                android:textSize="14sp"
-                android:textStyle="bold"
-                android:paddingHorizontal="20dp"
-                app:cornerRadius="20dp"
-                app:backgroundTint="#6366F1"
-                android:textColor="@android:color/white"/>
+            <!-- Bottom: Tab Indicators (편집모드에서만 표시) -->
+            <LinearLayout
+                android:id="@+id/tabContainer"
+                android:layout_width="match_parent"
+                android:layout_height="36dp"
+                android:orientation="horizontal"
+                android:gravity="center"
+                android:visibility="gone">
+                
+                <!-- 바코드 탭 -->
+                <LinearLayout
+                    android:id="@+id/tab_barcode"
+                    android:layout_width="0dp"
+                    android:layout_height="match_parent"
+                    android:layout_weight="1"
+                    android:orientation="horizontal"
+                    android:gravity="center"
+                    android:background="@drawable/tab_background_active"
+                    android:layout_marginEnd="4dp">
+                    
+                    <View
+                        android:layout_width="8dp"
+                        android:layout_height="8dp"
+                        android:background="@drawable/tab_indicator_active"
+                        android:layout_marginEnd="8dp"/>
+                        
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="바코드"
+                        android:textAppearance="@style/TextAppearance.Material3.LabelMedium"
+                        android:textColor="#6366F1"
+                        android:textStyle="bold"/>
+                </LinearLayout>
+                
+                <!-- 카테고리 탭 -->
+                <LinearLayout
+                    android:id="@+id/tab_category"
+                    android:layout_width="0dp"
+                    android:layout_height="match_parent"
+                    android:layout_weight="1"
+                    android:orientation="horizontal"
+                    android:gravity="center"
+                    android:background="@drawable/tab_background_inactive"
+                    android:layout_marginStart="4dp">
+                    
+                    <View
+                        android:layout_width="8dp"
+                        android:layout_height="8dp"
+                        android:background="@drawable/tab_indicator_inactive"
+                        android:layout_marginEnd="8dp"/>
+                        
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="카테고리"
+                        android:textAppearance="@style/TextAppearance.Material3.LabelMedium"
+                        android:textColor="#9CA3AF"
+                        android:textStyle="normal"/>
+                </LinearLayout>
+                
+            </LinearLayout>
                 
         </LinearLayout>
 
